@@ -1,0 +1,24 @@
+{
+  "originHash" : "a6c8968023bca2b13c247cd604af8d1366cdb6c16378215e3b76740e255bc84d",
+  "pins" : [
+    {
+      "identity" : "hebcal-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/spoerri/hebcal-swift",
+      "state" : {
+        "branch" : "main",
+        "revision" : "a0f7b21beeae488cb6752afde6d7edc1f1da186e"
+      }
+    },
+    {
+      "identity" : "suncalc",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Timac/SunCalc",
+      "state" : {
+        "revision" : "72931128f7f55fbf95d403ee7f02d263b8f62946",
+        "version" : "1.0.0"
+      }
+    }
+  ],
+  "version" : 3
+}
