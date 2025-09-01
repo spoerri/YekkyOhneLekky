@@ -1,4 +1,4 @@
-# Morning wake up alarms for Sabbath observance
+# Morning wake up alarms for sabbath observance
 
 ## features
 
