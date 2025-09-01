@@ -1,9 +1,12 @@
 # Morning wake up alarms for Sabbath observance
 
+## features
+
 * play alarms for a shorter time than Apple Clock, to reduce annoyance of not dismissing them
 * automatically handle holidays
 * use the new, robust alarm support in ios 25
 
+## todo
 
 1. actually play the sound - AlarmKit issue?
 2. reschedule (alarmUpdates) when app not running - AlarmKit issue?
