@@ -1,6 +1,6 @@
 # iphone alarms for shabbat and yom tov
 
-This app is not released yet, and still has significant bugs to be worked out visa vis the new AlarmKit API.
+This app is not released yet, and still has significant bugs to be worked out in relation to the new AlarmKit API.
 
 I hope to work it out this month, but as always, buyer beware! :)
 
