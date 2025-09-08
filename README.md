@@ -15,7 +15,7 @@ I hope to work it out this month, but as always, buyer beware! :)
 1. actually play the sound - AlarmKit issue?
 2. warn to start the app within the year
 3. test two alarms for the same time - yom tov shechalios beshabbes - causes freakout with alarmupdates?
-4. actually play the alarm three times
+4. play the alarm three times
 5. icon
 6. "about" window
 7. tip jar?
