@@ -1,5 +1,5 @@
-internal import SwiftUI
-internal import SwiftData
+import SwiftUI
+import SwiftData
 import AlarmKit //TODO move the alarmkit stuff into a separate class
 import Foundation
 import Hebcal
@@ -12,6 +12,7 @@ struct EditAlarmView: View {
     
     @State private var alarmName = ""
     @State private var selectedTime = Date()
+    @State private var isActive: Bool = true
     @State private var nextDayToFire: String
     @State private var showPermissionsDeniedAlert = false
     @State private var selectedSound: String? = nil
@@ -30,13 +31,14 @@ struct EditAlarmView: View {
     var body: some View {
         NavigationStack {
             Form {
-                AlarmDetailsSection(
+                AlarmDetailsView(
                     alarmName: $alarmName,
                     selectedTime: $selectedTime,
+                    isActive: $isActive,
                     nextDayToFire: $nextDayToFire
                 )
                 
-                SoundSelectionSection(selectedSound: $selectedSound)
+                SoundSelectionView(selectedSound: $selectedSound)
                 //TODO support for an "enabled" toggle
             }
             .navigationTitle("Edit Alarm")
@@ -75,8 +77,13 @@ struct EditAlarmView: View {
         
         alarmName = alarm.name
         selectedSound = alarm.selectedSound
+        isActive = alarm.isActive
         
         let calendar = Calendar.current
+        if alarmName == AlarmLogic.Once {
+            alarm.hour = calendar.component(.hour, from: Date())
+            alarm.minute = calendar.component(.minute, from: Date()) + 1
+        }
         selectedTime = calendar.date(bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: Date()) ?? Date()
     }
     
@@ -93,9 +100,9 @@ struct EditAlarmView: View {
                 let minute = calendar.component(.minute, from: selectedTime)
                 editingAlarm.hour = hour
                 editingAlarm.minute = minute
+                editingAlarm.isActive = isActive
                 editingAlarm.selectedSound = selectedSound
-                editingAlarm.nextDayToFire = HolidayAlarms.getDate(nameOfChag: alarmName)! //TODO error handling
-//                editingAlarm.nextDayToFire = Date() //should be commented out! otherwise for testing
+                editingAlarm.nextDayToFire = AlarmLogic.getDate(nameOfAlarm: alarmName)! //TODO error handling?
                 
                 do {
                     try AlarmManager.shared.stop(id: editingAlarm.id)
@@ -103,9 +110,11 @@ struct EditAlarmView: View {
                     print("could not cancel \(editingAlarm.id)")
                 }
                 
-                //TODO check if alarm is in the past
+                await AlarmLogic.scheduleAlarm(alarm: editingAlarm)
                 
-                await HolidayAlarms.scheduleAlarm(alarm: editingAlarm)
+                if editingAlarm.name == AlarmLogic.Once {
+                    editingAlarm.isActive = false
+                }
                 
                 try modelContext.save()
             }
@@ -116,41 +125,12 @@ struct EditAlarmView: View {
         }
     }
     
-    public static func scheduleNext(modelContext: ModelContext, alarms: [AlarmModel]) async {
-        print("\(Date()) Rescheduling: \(alarms.map{ $0.name})")
-        for alarm in alarms {
-            alarm.nextDayToFire = HolidayAlarms.getDate(nameOfChag: alarm.name)
-        }
-        do {
-            try modelContext.save()
-        } catch {
-            print("Error scheduling next alarm: \(error)")
-        }
-        for alarm in alarms {
-            do {
-                try AlarmManager.shared.stop(id: alarm.id)
-            } catch {
-            }
-            await HolidayAlarms.scheduleAlarm(alarm: alarm)
-        }
-    }
-    
     public static func initializeAlarms(modelContext: ModelContext, alarms: [AlarmModel]) async {
-        do {
-            for alarm in try AlarmManager.shared.alarms {
-                try AlarmManager.shared.cancel(id:alarm.id)
-            }
-        } catch {
-            print("Could not cancel all alarms")
-        }
-        
-        await createIfNesc(modelContext: modelContext, alarms: alarms, alarmName: HolidayAlarms.Shabbos)
-        
-        let chagim = HolidayAlarms.getChagim()
+        let chagim = AlarmLogic.getChagim()
         print(chagim.map(\.desc))
         //TODO also delete any alarms not in chagim, for when user goes to israel
         for chag in chagim {
-            await createIfNesc(modelContext: modelContext, alarms: alarms, alarmName: chag.desc)
+            await initializeAlarm(modelContext: modelContext, alarms: alarms, hEvent: chag)
         }
         do {
             try modelContext.save()
@@ -159,20 +139,20 @@ struct EditAlarmView: View {
         }
     }
     
-    static func createIfNesc(modelContext: ModelContext, alarms: [AlarmModel], alarmName: String) async {
-        var alarm = alarms.first(where: { $0.name == alarmName})
+    static func initializeAlarm(modelContext: ModelContext, alarms: [AlarmModel], hEvent: HEvent) async {
+        var alarm = alarms.first(where: { $0.name == hEvent.desc })
         if alarm == nil {
             alarm = AlarmModel(
-                name: alarmName,
+                name: hEvent.desc,
                 hour: 8,
                 minute: 0,
-                nextDayToFire: nil
+                nextDayToFire: hEvent.hdate.greg()
             )
             modelContext.insert(alarm!)
+        } else {
+            alarm!.nextDayToFire = hEvent.hdate.greg()
         }
-            
-        alarm!.nextDayToFire = HolidayAlarms.getDate(nameOfChag: alarmName)
-        await HolidayAlarms.scheduleAlarm(alarm: alarm!)
+        await AlarmLogic.scheduleAlarm(alarm: alarm!)
     }
     
     @MainActor

@@ -1,10 +1,10 @@
-internal import SwiftUI
+import SwiftUI
 import AVFoundation
 
 //TODO more sound choices
 //TODO user specify sound file?
 
-struct SoundSelectionSection: View {
+struct SoundSelectionView: View {
     @Binding var selectedSound: String?
     @State private var audioPlayer: AVAudioPlayer?
     @State private var currentlyPlayingSound: String?

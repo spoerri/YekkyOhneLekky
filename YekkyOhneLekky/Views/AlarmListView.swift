@@ -1,10 +1,11 @@
-internal import SwiftUI
-internal import SwiftData
+import SwiftUI
+import SwiftData
 import Hebcal
+import AlarmKit
 
 struct AlarmListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \AlarmModel.nextDayToFire) private var alarms: [AlarmModel]
+    @Query(sort: [SortDescriptor(\AlarmModel.alarmType), SortDescriptor(\AlarmModel.nextDayToFire)]) private var alarms: [AlarmModel]
     @State private var editingAlarm: AlarmModel?
     
     var body: some View {
@@ -21,16 +22,28 @@ struct AlarmListView: View {
                 for alarm in alarms {
                     print("  - \(alarm.name) at \(alarm.timeString)")
                 }
+                AlarmActor.createSharedInstance(modelContext: modelContext)
             }
             .sheet(item: $editingAlarm) { alarm in
                 EditAlarmView(editingAlarm: alarm)
             }
             .task {
+                //only used for dev, to clear out entries that were never created in a real release
 //                do {
 //                    try modelContext.delete(model: AlarmModel.self)
 //                } catch {
 //                    print("Failed to delete all instances of YourModelName: \(error.localizedDescription)")
 //                }
+                
+                //not sure exactly when this next is useful...
+//                do {
+//                    for alarm in try AlarmManager.shared.alarms {
+//                        try AlarmManager.shared.cancel(id: alarm.id)
+//                    }
+//                } catch {
+//                    print("Could not cancel all alarms")
+//                }
+                
                 await EditAlarmView.initializeAlarms(modelContext: modelContext, alarms: alarms)
             }
         }
@@ -49,9 +62,7 @@ struct AlarmRowView: View {
                     .frame(width: 180, alignment: .leading)
                     .padding()
                 
-                //TODO show the date of next firing here too?
-                
-                Text(alarm.timeString)
+                Text(alarm.isActive ? alarm.timeString : "")
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
