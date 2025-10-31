@@ -10,18 +10,20 @@ class AlarmModel {
     var hour: Int
     var minute: Int
     var nextDayToFire: Date?
+    var daysOfWeek: Set<String>
     var isActive: Bool
     var createdAt: Date
     var selectedSound: String?
-    var alarmType: Int? //TODO what's wrong with persisting my enum? breaks the @Query sort in AlarmListView
+    var alarmType: Int //TODO what's wrong with persisting my enum? breaks the @Query sort in AlarmListView
     
-    init(id: UUID = UUID(), name: String, hour: Int, minute: Int, nextDayToFire: Date?, isActive: Bool = true, selectedSound: String? = nil) {
+    init(id: UUID = UUID(), name: String, hour: Int, minute: Int, nextDayToFire: Date?, isActive: Bool = true, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil) {
         self.id = id
         self.name = name
         self.hour = hour
         self.minute = minute
         self.nextDayToFire = nextDayToFire
         self.isActive = isActive
+        self.daysOfWeek = daysOfWeek
         self.createdAt = Date()
         self.selectedSound = selectedSound
         self.alarmType = AlarmLogic.weekDays.contains(name) ? AlarmType.dayOfWeek.rawValue : AlarmType.holiday.rawValue
@@ -35,13 +37,18 @@ class AlarmModel {
     }
     
     func getAlarmDate() -> Date? {
-        return Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: nextDayToFire!, matchingPolicy: .nextTime)
+        if let n = nextDayToFire {
+            return Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: n, matchingPolicy: .nextTime)
+        } else {
+            return nil
+        }
     }
 }
 
 enum AlarmType: Int, Codable, Comparable {
-    case holiday = 0
-    case dayOfWeek = 1
+    case explicit = 0 //TODO AlarmActor removing passed ones (except Once), AlarmDetailsView changing date, AlarmListView adding
+    case holiday = 1
+    case dayOfWeek = 2
 
      static func ==(lhs: AlarmType, rhs: AlarmType) -> Bool {
         return lhs.rawValue == rhs.rawValue

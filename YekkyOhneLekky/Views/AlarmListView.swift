@@ -5,7 +5,8 @@ import AlarmKit
 
 struct AlarmListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: [SortDescriptor(\AlarmModel.alarmType), SortDescriptor(\AlarmModel.nextDayToFire)]) private var alarms: [AlarmModel]
+    static nonisolated let alarmOrder = [SortDescriptor(\AlarmModel.alarmType), SortDescriptor(\AlarmModel.nextDayToFire)]
+    @Query(sort: alarmOrder) private var alarms: [AlarmModel]
     @State private var editingAlarm: AlarmModel?
     
     var body: some View {
@@ -29,11 +30,11 @@ struct AlarmListView: View {
             }
             .task {
                 //only used for dev, to clear out entries that were never created in a real release
-//                do {
-//                    try modelContext.delete(model: AlarmModel.self)
-//                } catch {
-//                    print("Failed to delete all instances of YourModelName: \(error.localizedDescription)")
-//                }
+                do {
+                    try modelContext.delete(model: AlarmModel.self)
+                } catch {
+                    print("Failed to delete all instances of YourModelName: \(error.localizedDescription)")
+                }
                 
                 //not sure exactly when this next is useful...
 //                do {

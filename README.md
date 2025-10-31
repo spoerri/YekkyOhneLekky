@@ -13,10 +13,7 @@ I hope to work it out this month, but as always, buyer beware! :)
 ## todo
 
 1. custom alarms - AlarmKit issue
-2. support using for weekdays
-3. disabling alarms
-4. background task
-5. "about" window
-6. donations
-7. durations
+2. "about" window
+3. donations
+4. durations
 

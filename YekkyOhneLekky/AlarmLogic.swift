@@ -31,14 +31,16 @@ class AlarmLogic {
         }
 //        print("Next year's \(nextYears.map{ $0.hdate.greg() })")
         
-        return [HEvent.init(hdate: htoday, desc: Once)] + thisYears + nextYears
-            + weekDays.map { HEvent.init(hdate: HDate(date: getNextDayOfWeek(nameOfDay: $0)!, calendar: .current), desc: $0) }
+        return [HEvent.init(hdate: htoday, desc: Once)] + thisYears + nextYears + weekDays.compactMap {
+            if let nextDate = getNextDayOfWeek(nameOfDay: $0) {
+                HEvent.init(hdate: HDate(date: nextDate, calendar: .current), desc: $0) //TODO good syntax?
+            } else {
+                nil
+            }
+        }
     }
     
     class func getNextDayOfWeek(nameOfDay: String) -> Date? {
-        //TODO step 2 display checkboxes in those entries to also set other days
-        //TODO step 3 smarter ui?
-        
         for (index, name) in weekDays.enumerated() {
             if nameOfDay == name {
                 return Calendar.current.nextDate(after: Date(), matching: DateComponents(weekday: index+1), matchingPolicy: .nextTimePreservingSmallerComponents)
@@ -54,7 +56,11 @@ class AlarmLogic {
         if let weekDay = getNextDayOfWeek(nameOfDay: nameOfAlarm) {
             return weekDay
         }
-        return getChagim().filter { $0.desc == nameOfAlarm }.first!.hdate.greg()
+        if let chag = getChagim().filter({ $0.desc == nameOfAlarm }).first {
+            return chag.hdate.greg()
+        } else {
+            return nil
+        }
     }
     
     class func isScheduled(_ alarm: AlarmModel) throws -> Bool {
@@ -68,13 +74,16 @@ class AlarmLogic {
             }
             
             if (weekDays.contains(alarm.name)) {
-                //TODO test this next
                 //the app will always create the holiday entry for a day _before_ trying to create a day-of-week entry for it
-                let alarmDate = alarm.nextDayToFire
-                if let holiday = try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { holiday in !weekDays.contains(holiday.name) && holiday.nextDayToFire == alarmDate })) {
-                    let holidayName = holiday.first!.name
-                    print("Not scheduling a "+alarm.name+" because there is a holiday, "+holidayName+", on that day: "+alarm.timeString)
-                    return
+                let alarmType = alarm.alarmType
+                let alarmNextDayToFire = alarm.nextDayToFire
+                if let holidays = try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { holiday in
+                        alarmType != holiday.alarmType &&
+                        alarmNextDayToFire == holiday.nextDayToFire })) {
+                    if let holiday = holidays.first {
+                        print("Not scheduling a "+alarm.name+" because there is a holiday, "+holiday.name+", on that day: "+alarm.timeString)
+                        return
+                    }
                 }
             }
             
