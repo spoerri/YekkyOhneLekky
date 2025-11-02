@@ -6,17 +6,19 @@ import AVFoundation
 @Model
 class AlarmModel {
     @Attribute(.unique) var id: UUID
-    var name: String
+    @Attribute(.unique) var name: String
     var hour: Int
     var minute: Int
     var nextDayToFire: Date?
-    var daysOfWeek: Set<String>
     var isActive: Bool
-    var createdAt: Date
+    var daysOfWeek: Set<String>
     var selectedSound: String?
-    var alarmType: Int //TODO what's wrong with persisting my enum? breaks the @Query sort in AlarmListView
+    var createdAt: Date
+    var repetitions: Int
+    var repetitionDelay: TimeInterval
+    var alarmType: Int //sad, maybe one day we'll be able to use the enum type here
     
-    init(id: UUID = UUID(), name: String, hour: Int, minute: Int, nextDayToFire: Date?, isActive: Bool = true, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil) {
+    init(id: UUID = UUID(), name: String, hour: Int, minute: Int, nextDayToFire: Date?, isActive: Bool = true, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil, repetitions: Int = 0, repetitionDelay: TimeInterval = 60) {
         self.id = id
         self.name = name
         self.hour = hour
@@ -26,7 +28,9 @@ class AlarmModel {
         self.daysOfWeek = daysOfWeek
         self.createdAt = Date()
         self.selectedSound = selectedSound
-        self.alarmType = AlarmLogic.weekDays.contains(name) ? AlarmType.dayOfWeek.rawValue : AlarmType.holiday.rawValue
+        self.repetitions = repetitions
+        self.repetitionDelay = repetitionDelay
+        self.alarmType = (AlarmLogic.allDaysOfWeek.contains(name) ? AlarmType.dayOfWeek : AlarmType.holiday).rawValue
     }
     
     var timeString: String {
@@ -43,6 +47,8 @@ class AlarmModel {
             return nil
         }
     }
+    
+    static let dayOfWeek = AlarmType.dayOfWeek.rawValue
 }
 
 enum AlarmType: Int, Codable, Comparable {

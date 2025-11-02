@@ -30,10 +30,12 @@ struct AlarmListView: View {
             }
             .task {
                 //only used for dev, to clear out entries that were never created in a real release
-                do {
-                    try modelContext.delete(model: AlarmModel.self)
-                } catch {
-                    print("Failed to delete all instances of YourModelName: \(error.localizedDescription)")
+                if false {
+                    do {
+                        try modelContext.delete(model: AlarmModel.self)
+                    } catch {
+                        print("Failed to delete all instances of YourModelName: \(error.localizedDescription)")
+                    }
                 }
                 
                 //not sure exactly when this next is useful...
@@ -55,8 +57,7 @@ struct AlarmRowView: View {
     let alarm: AlarmModel
     
     var body: some View {
-        VStack(/*alignment: .leading, spacing: 6*/) { //TODO is there some extra spacing at the top?
-            
+        VStack() {
             HStack {
                 Text(alarm.name)
                     .font(.headline)

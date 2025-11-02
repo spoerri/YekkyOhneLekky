@@ -7,7 +7,7 @@ import SwiftUI
 
 class AlarmLogic {
     public static nonisolated let Once = "Just once"
-    public static nonisolated let weekDays = Calendar.current.standaloneWeekdaySymbols
+    public static nonisolated let allDaysOfWeek = Calendar.current.standaloneWeekdaySymbols
     
     public class func getChagim() -> [HEvent] {
         //TODO allow overriding israel
@@ -31,7 +31,7 @@ class AlarmLogic {
         }
 //        print("Next year's \(nextYears.map{ $0.hdate.greg() })")
         
-        return [HEvent.init(hdate: htoday, desc: Once)] + thisYears + nextYears + weekDays.compactMap {
+        return [HEvent.init(hdate: htoday, desc: Once)] + thisYears + nextYears + allDaysOfWeek.compactMap {
             if let nextDate = getNextDayOfWeek(nameOfDay: $0) {
                 HEvent.init(hdate: HDate(date: nextDate, calendar: .current), desc: $0) //TODO good syntax?
             } else {
@@ -41,7 +41,7 @@ class AlarmLogic {
     }
     
     class func getNextDayOfWeek(nameOfDay: String) -> Date? {
-        for (index, name) in weekDays.enumerated() {
+        for (index, name) in allDaysOfWeek.enumerated() {
             if nameOfDay == name {
                 return Calendar.current.nextDate(after: Date(), matching: DateComponents(weekday: index+1), matchingPolicy: .nextTimePreservingSmallerComponents)
             }
@@ -73,7 +73,7 @@ class AlarmLogic {
                 return;
             }
             
-            if (weekDays.contains(alarm.name)) {
+            if (allDaysOfWeek.contains(alarm.name)) {
                 //the app will always create the holiday entry for a day _before_ trying to create a day-of-week entry for it
                 let alarmType = alarm.alarmType
                 let alarmNextDayToFire = alarm.nextDayToFire
@@ -86,6 +86,8 @@ class AlarmLogic {
                     }
                 }
             }
+            
+            //TODO repetitions
             
             let schedule = getSchedule(alarm: alarm)
             
@@ -155,9 +157,9 @@ class AlarmLogic {
     }
     
     public class func getSalutation(alarm: AlarmModel) -> LocalizedStringResource {
-        if alarm.name == weekDays[6] {
+        if alarm.name == allDaysOfWeek[6] {
             return "Gut shabbes!"
-        } else if weekDays.contains(alarm.name) {
+        } else if alarm.alarmType == AlarmModel.dayOfWeek {
             return "Gut morgn!"
         } else {
             return "Gut yontif!"

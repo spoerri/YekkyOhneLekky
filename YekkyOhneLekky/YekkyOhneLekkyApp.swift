@@ -32,7 +32,7 @@ struct YekkyOhneLekkyApp: App {
             ContentView()
         }
         .modelContainer(container)
-        .onChange(of: phase) { newPhase, arg in //TODO do i need to care about arg?
+        .onChange(of: phase) { newPhase, arg in //TODO need to care about arg?
             switch newPhase {
                 case .background: scheduleAppRefresh()
                 default: break
