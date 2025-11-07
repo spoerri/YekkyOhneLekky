@@ -12,8 +12,6 @@ I hope to work it out this month, but as always, buyer beware! :)
 
 ## todo
 
-1. custom alarms - AlarmKit issue
-2. "about" window
-3. donations
-4. durations
-
+1. donations
+2. legal holidays
+3. fasts etc

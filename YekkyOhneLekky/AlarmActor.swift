@@ -11,23 +11,17 @@ actor AlarmActor {
     }
     
     func scheduleNextAlarms() async throws {
-        //TODO split the sorting away from AlarmListView and instead share with EditAlarmView.initializeAlarms to ensure holiday alarm beats weekDay alarm, especially because with nicer UI, week day alarms will want to be sorted to the top in AlarmListView
-        for alarm in try ModelContext(modelContainer).fetch(FetchDescriptor<AlarmModel>(sortBy: AlarmListView.alarmOrder)) {
-//                print("Considering alarm to reschedule " + alarm.name)
-            if alarm.name == AlarmLogic.Once {
-                alarm.isActive = false
-                continue
+        print("Rescheduling")
+        for alarm in try ModelContext(modelContainer).fetch(FetchDescriptor<AlarmModel>()) {
+            if alarm.alarmType == AlarmModel.explicit {
+                if true {
+                    alarm.isEnabled = false
+                    continue
+                } else {
+                    alarm.minute = Calendar.current.component(.minute, from: Date()) + 1 //for testing
+                }
             }
-            guard let alarmDate = alarm.getAlarmDate() else {
-                print("Failed to figure alarm time for \(alarm.name)");
-                continue
-            }
-            if (alarmDate < Date()) {
-                alarm.nextDayToFire = await AlarmLogic.getDate(nameOfAlarm: alarm.name)
-                await AlarmLogic.scheduleAlarm(alarm: alarm)
-            } else if await (try !AlarmLogic.isScheduled(alarm)) {
-                await AlarmLogic.scheduleAlarm(alarm: alarm)
-            }
+            await AlarmLogic.schedule(alarm)
         }
         try modelContext.save()
     }

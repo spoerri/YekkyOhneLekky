@@ -4,9 +4,9 @@ import Hebcal
 import AlarmKit
 
 struct AlarmListView: View {
+    @Binding var showModal: Bool
     @Environment(\.modelContext) private var modelContext
-    static nonisolated let alarmOrder = [SortDescriptor(\AlarmModel.alarmType), SortDescriptor(\AlarmModel.nextDayToFire)]
-    @Query(sort: alarmOrder) private var alarms: [AlarmModel]
+    @Query(sort: [SortDescriptor(\AlarmModel.alarmType), SortDescriptor(\AlarmModel.nextDayToFire)]) private var alarms: [AlarmModel]
     @State private var editingAlarm: AlarmModel?
     
     var body: some View {
@@ -18,36 +18,40 @@ struct AlarmListView: View {
                             editingAlarm = alarm
                         }
                 }
+                HStack {
+                    Spacer()
+                    Button("Disable all") {
+                    }.onTapGesture {
+                        for alarm in alarms {
+                            alarm.isEnabled = false
+                            alarm.unschedule()
+                        }
+                    }
+                    .foregroundColor(.red)
+                    .frame(width: 180, alignment: .leading)
+                    .padding()
+                    Button("About") { //TODO is it just me, or is this higher?
+                    }.onTapGesture {
+                        showModal.toggle()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                }
             }
             .onAppear {
-                for alarm in alarms {
-                    print("  - \(alarm.name) at \(alarm.timeString)")
-                }
                 AlarmActor.createSharedInstance(modelContext: modelContext)
             }
             .sheet(item: $editingAlarm) { alarm in
                 EditAlarmView(editingAlarm: alarm)
             }
             .task {
-                //only used for dev, to clear out entries that were never created in a real release
-                if false {
-                    do {
-                        try modelContext.delete(model: AlarmModel.self)
-                    } catch {
-                        print("Failed to delete all instances of YourModelName: \(error.localizedDescription)")
-                    }
+                let explicit: Int = AlarmModel.explicit
+                do {
+                    try modelContext.delete(model: AlarmModel.self, where: #Predicate { $0.alarmType == explicit && !$0.isEnabled }) //TODO error: forcedunwrap?
+                } catch {
+                    print("couldn't delete old one off alarms: \(error)")
                 }
-                
-                //not sure exactly when this next is useful...
-//                do {
-//                    for alarm in try AlarmManager.shared.alarms {
-//                        try AlarmManager.shared.cancel(id: alarm.id)
-//                    }
-//                } catch {
-//                    print("Could not cancel all alarms")
-//                }
-                
-                await EditAlarmView.initializeAlarms(modelContext: modelContext, alarms: alarms)
+                await AlarmLogic.initializeAlarms(modelContext: modelContext, alarms: alarms)
             }
         }
     }
@@ -64,7 +68,7 @@ struct AlarmRowView: View {
                     .frame(width: 180, alignment: .leading)
                     .padding()
                 
-                Text(alarm.isActive ? alarm.timeString : "")
+                Text(alarm.isEnabled ? alarm.timeString : "")
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -76,8 +80,7 @@ struct AlarmRowView: View {
 }
 
 #Preview {
-    AlarmListView()
+    @Previewable @State var value = false
+    AlarmListView(showModal: $value)
         .modelContainer(for: AlarmModel.self, inMemory: true)
 }
-
-//TODO an "About" view

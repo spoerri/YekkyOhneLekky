@@ -12,6 +12,7 @@ struct YekkyOhneLekkyApp: App {
     init() {
         do {
             container = try ModelContainer(for: AlarmModel.self)
+            try container.mainContext.delete(model: AlarmModel.self) //only in dev
         } catch {
             fatalError("Failed to initialize ModelContainer")
         }

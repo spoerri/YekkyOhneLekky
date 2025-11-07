@@ -4,17 +4,53 @@ struct AlarmDetailsView: View {
     @Binding var alarmName: String
     @Binding var alarmType: Int
     @Binding var selectedTime: Date
-    @Binding var isActive: Bool
-    @Binding var nextDayToFire: String
+    @Binding var duration: TimeInterval
+    @Binding var repetitions: Int
+    @Binding var repetitionDelay: TimeInterval
+    @Binding var isEnabled: Bool
+    @Binding var isGrouped: Bool
+    @Binding var nextDayToFire: Date
     @Binding var daysOfWeek: Set<String>
     
     var body: some View {
         Section(header: Text("Alarm Details")) {
-            Text(alarmName)
-            DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
-            //TODO repetitions etc
-            Toggle("Enabled", isOn: $isActive)
-            LabeledContent("Next date", value: nextDayToFire)
+            if alarmName != AlarmLogic.Once || isEnabled {
+                DatePicker(alarmName != AlarmLogic.Once && alarmType != AlarmModel.explicit ? "Next date" : "Date",
+                           selection: $nextDayToFire, displayedComponents: .date)
+                    .disabled(alarmName != AlarmLogic.Once && alarmType != AlarmModel.explicit)
+            }
+            DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute).onChange(of: selectedTime) {
+                if alarmName != AlarmLogic.Once {
+                    isEnabled = true
+                }
+            }
+            Toggle("Enabled", isOn: $isEnabled)
+            if alarmType == AlarmModel.yomtov && alarmName != AlarmLogic.Once {
+                Toggle("Configured with other yomim tovim", isOn: $isGrouped)
+            }
+            Picker("Duration", selection: $duration) {
+                ForEach(0..<10) { n in
+                    if n == 0 {
+                        Text("30 seconds").tag(TimeInterval(30))
+                    } else {
+                        Text("^[\(n) minutes](inflect: true)").tag(TimeInterval(n*60))
+                    }
+                }
+            }.pickerStyle(.menu)
+            Picker("Repetitions", selection: $repetitions) {
+                ForEach(0..<10) { n in
+                    Text("^[\(n) extra times](inflect: true)").tag(n)
+                }
+            }.pickerStyle(.menu)
+            Picker("Repetition delay", selection: $repetitionDelay) {
+                ForEach(0..<10) { n in
+                    if n == 0 {
+                        Text("30 seconds").tag(TimeInterval(30))
+                    } else {
+                        Text("^[\(n) minutes](inflect: true)").tag(TimeInterval(n*60))
+                    }
+                }
+            }.pickerStyle(.menu).disabled(repetitions == 0)
             if alarmType == AlarmModel.dayOfWeek {
                 StatefulPreviewWrapper() { _ in DaysOfWeekView(selectedDays: $daysOfWeek, alarmName: alarmName) }
             }

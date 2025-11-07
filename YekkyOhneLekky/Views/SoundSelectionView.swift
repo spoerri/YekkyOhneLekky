@@ -2,22 +2,27 @@ import SwiftUI
 import AVFoundation
 
 //TODO more sound choices
-//TODO user specify sound file?
+//TODO user specified sound file?
 
 struct SoundSelectionView: View {
     @Binding var selectedSound: String?
     @State private var audioPlayer: AVAudioPlayer?
     @State private var currentlyPlayingSound: String?
     
+    //TODO just an array of Strings ?
     private let soundOptions: [(filename: String?, label: String)] = [
         (nil, "Default"),
-        ("airhorn", "MLG Airhorn")
+        ("airhorn", "MLG Airhorn"),
+        ("First Light", "First Light"),
+        ("Early Riser", "Early Riser"),
+        ("Helios", "Helios")
     ]
     
     var body: some View {
         Section(header: Text("Sound")) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
+                    //TODO wrap
                     ForEach(soundOptions, id: \.filename) { option in
                         SoundButton(
                             filename: option.filename,
