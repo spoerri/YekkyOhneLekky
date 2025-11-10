@@ -12,9 +12,9 @@ struct EditAlarmView: View {
     let editingAlarm: AlarmModel?
     
     @State private var alarmName = ""
-    @State private var alarmType = -1
+    @State private var alarmType = AlarmType.explicit
     @State private var selectedTime = Date()
-    @State private var duration: TimeInterval = -1
+    @State private var duration: TimeInterval?
     @State private var repetitions: Int = -1
     @State private var repetitionDelay: TimeInterval = -1
     @State private var isEnabled: Bool = true
@@ -45,7 +45,7 @@ struct EditAlarmView: View {
                 )
                 SoundSelectionView(selectedSound: $selectedSound)
             }
-            .navigationTitle(alarmType == AlarmModel.explicit ? "One off alarm" : alarmName)
+            .navigationTitle(alarmType == .explicit ? "One off alarm" : alarmType == .weekDay ? "Weekly alarms" : alarmName)
             .navigationBarTitleDisplayMode(.inline)
             .onTapGesture {
             }
@@ -95,7 +95,7 @@ struct EditAlarmView: View {
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
-        nextDayToFire = (try? AlarmLogic.getNextDayToFire(alarm)) ?? Date()
+        nextDayToFire = AlarmLogic.getNextDayToFire(alarm) ?? Date()
     }
     
     @MainActor
@@ -105,49 +105,62 @@ struct EditAlarmView: View {
             
             if let editingAlarm = editingAlarm {
                 let calendar = Calendar.current
-                let hour = calendar.component(.hour, from: selectedTime)
-                let minute = calendar.component(.minute, from: selectedTime)
+                editingAlarm.hour = calendar.component(.hour, from: selectedTime)
+                editingAlarm.minute = calendar.component(.minute, from: selectedTime)
                 
-                let dayOfWeekType = AlarmModel.dayOfWeek
-                if editingAlarm.alarmType == dayOfWeekType {
-                    for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { $0.alarmType == dayOfWeekType })) {
-                        if daysOfWeek.contains(alarm.name) {
-                            await saveAlarm(alarm, hour, minute)
-                        } else {
-                            alarm.daysOfWeek.subtract(daysOfWeek)
-                        }
-                    }
-                } else if editingAlarm.name == AlarmLogic.Once && isEnabled {
-                    if let nextDayToFire = editingAlarm.nextDayToFire {
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "yyyy-MM-dd"
+                if editingAlarm.alarmType == .weekDay && !daysOfWeek.isEmpty {
+                    let removedDays = editingAlarm.daysOfWeek.subtracting(daysOfWeek)
+                    if !removedDays.isEmpty {
                         let newAlarm = AlarmModel(
-                            name: dateFormatter.string(from: nextDayToFire),
-                            hour: hour,
-                            minute: minute,
-                            nextDayToFire: nextDayToFire
+                            name: "",
+                            alarmType: .weekDay,
+                            hour: editingAlarm.hour,
+                            minute: editingAlarm.minute
                         )
-                        newAlarm.alarmType = AlarmModel.explicit
+                        populateAlarm(newAlarm)
+                        newAlarm.daysOfWeek = removedDays
+                        newAlarm.setNameFromDaysOfWeek()
+                        newAlarm.isEnabled = false
                         modelContext.insert(newAlarm)
-                        await saveAlarm(newAlarm, hour, minute)
-                        
                     }
-                } else {
-                    if editingAlarm.alarmType == AlarmModel.explicit {
-                        let dateFormatter = DateFormatter()
-                        dateFormatter.dateFormat = "yyyy-MM-dd"
-                        editingAlarm.name = dateFormatter.string(from: nextDayToFire)
-                        await saveAlarm(editingAlarm, hour, minute)
-                    } else if isGrouped && editingAlarm.name != AlarmLogic.Once {
-                        let yomtovType = AlarmModel.yomtov
-                        for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { $0.alarmType == yomtovType && $0.isGrouped })) {
-                            if alarm.name != AlarmLogic.Once {
-                                await saveAlarm(alarm, hour, minute)
+                    for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>()) {
+                        if !daysOfWeek.isDisjoint(with: alarm.daysOfWeek) && alarm != editingAlarm {
+                            alarm.unschedule()
+                            alarm.daysOfWeek.subtract(daysOfWeek)
+                            if alarm.daysOfWeek.isEmpty {
+                                modelContext.delete(alarm)
+                            } else {
+                                alarm.setNameFromDaysOfWeek()
+                                await AlarmLogic.schedule(alarm)
                             }
                         }
-                    } else {
-                        await saveAlarm(editingAlarm, hour, minute)
                     }
+                    populateAlarm(editingAlarm)
+                    editingAlarm.setNameFromDaysOfWeek()
+                    await AlarmLogic.schedule(editingAlarm)
+                } else if editingAlarm.name == AlarmLogic.Once && isEnabled {
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateFormat = "yyyy-MM-dd"
+                    let newAlarm = AlarmModel(
+                        name: dateFormatter.string(from: nextDayToFire),
+                        alarmType: AlarmType.explicit,
+                        hour: editingAlarm.hour,
+                        minute: editingAlarm.minute
+                    )
+                    modelContext.insert(newAlarm)
+                    populateAlarm(newAlarm)
+                    newAlarm.isGrouped = true
+                    await AlarmLogic.schedule(newAlarm)
+                } else if isGrouped {
+                    var alarms = Set(try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.isGrouped })))
+                    alarms.insert(editingAlarm)
+                    for alarm in alarms {
+                        if alarm.alarmType == editingAlarm.alarmType {
+                            await reschedule(alarm)
+                        }
+                    }
+                } else {
+                    await reschedule(editingAlarm)
                 }
                 
                 try modelContext.save()
@@ -159,10 +172,20 @@ struct EditAlarmView: View {
         }
     }
     
-    private func saveAlarm(_ alarm: AlarmModel, _ hour: Int, _ minute: Int) async {
+    private func reschedule(_ alarm: AlarmModel) async {
         alarm.unschedule()
-        alarm.hour = hour
-        alarm.minute = minute
+        if alarm.name != AlarmLogic.Once && alarm.alarmType == AlarmType.explicit {
+            if let nextDayToFire = alarm.nextDayToFire {
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd"
+                alarm.name = dateFormatter.string(from: nextDayToFire)
+            }
+        }
+        populateAlarm(alarm)
+        await AlarmLogic.schedule(alarm)
+    }
+    
+    private func populateAlarm(_ alarm: AlarmModel) {
         alarm.isEnabled = isEnabled
         alarm.isGrouped = isGrouped
         alarm.daysOfWeek = daysOfWeek
@@ -170,7 +193,6 @@ struct EditAlarmView: View {
         alarm.duration = duration
         alarm.repetitions = repetitions
         alarm.repetitionDelay = repetitionDelay
-        await AlarmLogic.schedule(alarm)
     }
     
     @MainActor

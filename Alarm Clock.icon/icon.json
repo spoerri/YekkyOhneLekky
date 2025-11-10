@@ -4,29 +4,27 @@
   },
   "groups" : [
     {
-      "blend-mode" : "normal",
       "layers" : [
         {
-          "image-name" : "jacket.svg",
-          "name" : "jacket"
+          "hidden" : false,
+          "image-name" : "User-Friendly Turquoise Alarm Clock App Icon.svg.svg",
+          "name" : "User-Friendly Turquoise Alarm Clock App Icon.svg",
+          "position" : {
+            "scale" : 5.25,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         }
       ],
-      "lighting" : "individual",
-      "position" : {
-        "scale" : 2,
-        "translation-in-points" : [
-          0,
-          0
-        ]
-      },
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.5
       },
-      "specular" : false,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.7
+        "value" : 0.5
       }
     }
   ],

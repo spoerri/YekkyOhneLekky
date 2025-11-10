@@ -13,13 +13,10 @@ actor AlarmActor {
     func scheduleNextAlarms() async throws {
         print("Rescheduling")
         for alarm in try ModelContext(modelContainer).fetch(FetchDescriptor<AlarmModel>()) {
-            if alarm.alarmType == AlarmModel.explicit {
-                if true {
-                    alarm.isEnabled = false
-                    continue
-                } else {
-                    alarm.minute = Calendar.current.component(.minute, from: Date()) + 1 //for testing
-                }
+            if alarm.isExplicit {
+//                    alarm.isEnabled = false
+                modelContext.delete(alarm)
+                continue
             }
             await AlarmLogic.schedule(alarm)
         }

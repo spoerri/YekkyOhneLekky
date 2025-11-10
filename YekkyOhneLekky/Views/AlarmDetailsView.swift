@@ -2,31 +2,39 @@ import SwiftUI
 
 struct AlarmDetailsView: View {
     @Binding var alarmName: String
-    @Binding var alarmType: Int
+    @Binding var alarmType: AlarmType
     @Binding var selectedTime: Date
-    @Binding var duration: TimeInterval
+    @Binding var duration: TimeInterval?
     @Binding var repetitions: Int
     @Binding var repetitionDelay: TimeInterval
     @Binding var isEnabled: Bool
     @Binding var isGrouped: Bool
     @Binding var nextDayToFire: Date
     @Binding var daysOfWeek: Set<String>
+    @State private var initialSelectedTime: Date = Date.distantPast
     
     var body: some View {
         Section(header: Text("Alarm Details")) {
             if alarmName != AlarmLogic.Once || isEnabled {
-                DatePicker(alarmName != AlarmLogic.Once && alarmType != AlarmModel.explicit ? "Next date" : "Date",
+                DatePicker(alarmName != AlarmLogic.Once && alarmType != .explicit ? "Next date" : "Date",
                            selection: $nextDayToFire, displayedComponents: .date)
-                    .disabled(alarmName != AlarmLogic.Once && alarmType != AlarmModel.explicit)
+                    .disabled(alarmName != AlarmLogic.Once && alarmType != .explicit)
             }
-            DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute).onChange(of: selectedTime) {
-                if alarmName != AlarmLogic.Once {
-                    isEnabled = true
+            DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
+                .onChange(of: selectedTime, initial: true) { //false doesn't work, so use initialSelectedTime var
+                    if alarmName == AlarmLogic.Once {
+                        return
+                    }
+                    if initialSelectedTime == Date.distantPast {
+                        initialSelectedTime = selectedTime
+                    } else if selectedTime != initialSelectedTime {
+                        isEnabled = true
+                        initialSelectedTime = selectedTime
+                    }
                 }
-            }
             Toggle("Enabled", isOn: $isEnabled)
-            if alarmType == AlarmModel.yomtov && alarmName != AlarmLogic.Once {
-                Toggle("Configured with other yomim tovim", isOn: $isGrouped)
+            if let groupLabel = AlarmLogic.groupLabel[alarmType] {
+                Toggle("Configured with other "+groupLabel, isOn: $isGrouped)
             }
             Picker("Duration", selection: $duration) {
                 ForEach(0..<10) { n in
@@ -36,12 +44,18 @@ struct AlarmDetailsView: View {
                         Text("^[\(n) minutes](inflect: true)").tag(TimeInterval(n*60))
                     }
                 }
+                Text("n/a").tag(nil as TimeInterval?)
             }.pickerStyle(.menu)
             Picker("Repetitions", selection: $repetitions) {
                 ForEach(0..<10) { n in
                     Text("^[\(n) extra times](inflect: true)").tag(n)
                 }
             }.pickerStyle(.menu)
+                .onChange(of: repetitions) {
+                    if repetitions > 0 && duration == nil {
+                        duration = TimeInterval(60)
+                    }
+                }
             Picker("Repetition delay", selection: $repetitionDelay) {
                 ForEach(0..<10) { n in
                     if n == 0 {
@@ -51,7 +65,7 @@ struct AlarmDetailsView: View {
                     }
                 }
             }.pickerStyle(.menu).disabled(repetitions == 0)
-            if alarmType == AlarmModel.dayOfWeek {
+            if alarmType == .weekDay {
                 StatefulPreviewWrapper() { _ in DaysOfWeekView(selectedDays: $daysOfWeek, alarmName: alarmName) }
             }
         }
@@ -81,11 +95,9 @@ struct DaysOfWeekView: View {
                         .background(selectedDays.contains(allDaysOfWeek[day]) ? Color.accentColor : Color(.systemGray5))
                         .clipShape(Circle())
                 }
-                .disabled(allDaysOfWeek[day] == alarmName)
+                .disabled(allDaysOfWeek[day] == AlarmLogic.Saturday)
                 .buttonStyle(PlainButtonStyle())
             }
-        }.task {
-            selectedDays.insert(alarmName)
         }
     }
 }

@@ -29,11 +29,17 @@ YekkyOhneLekky provides shabbos and yom tov wake-up alarms that don't bother peo
 
 YekkyOhneLekky also automatically sets jewish holiday alarms appropriately based on the jewish calendar. If you go to the same minyan for each holiday from year to year, you'll never have to worry about resetting that alarm; it'll continue to ring at the same time automatically on the right date each year.
 
-YekkyOhneLekky can even relieve you of turning off your regular weekday alarms before holidays. Put those alarms in Yekky instead of Apple's standard Clock, and they'll only be used on non-holidays. It also supports "one off" alarms that override any of the above. You can use this feature to test alarms when you first start using the app.
+YekkyOhneLekky can even relieve you of turning off your regular weekday alarms before holidays. Put those alarms in Yekky instead of Apple's standard Clock, and they'll only be used on non-holidays. It supports alarms for US national holidays, as well as rosh chodesh, fasts, and holidays without an issur melacha. It also supports "one off" alarms that override any of the above. You can use this feature to test alarms when you first start using the app.
 
-For now, please remember to continue manually maintaining your alarms for legal holidays, minor holidays, rosh chodesh, alos minyanim, and any day with selichos.
+For now, please remember to manually update your alarms for yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
 
-I hope you enjoy it! With love, and with gratitude to the boreh olam, Joshua Spoerri
+The app should not have to be running in order for alarms to sound, or for subsequent alarms to be scheduled. The only exception is if the app is not running and your phone is entirely off when an alarm is scheduled to run. In this case, just start Yekky after you turn your phone on.
+
+Yekky should be smart about multiple alarms occurring on the same day; it prefers the sensible one. “One off”s beat yom tov, yom tov beats shabbos, shabbos beats national holidays, national holidays beat rosh chodesh, and rosh chodesh beats weekdays (eg Tuesday). (Fasts and chol hamoed have the same precedence as rosh chodesh. Sundays have the same precedence as national holidays.) The simple explanation is that on “work days”, shacharis is often scheduled to enable people to get to work on time. Disabling a higher precedence alarm doesn't currently restore a lower precedence alarm automatically.
+
+I hope you enjoy it!
+
+With love, and with gratitude to the boreh olam, Joshua Spoerri
 """).padding()
                 HStack {
                     Spacer()
@@ -44,7 +50,7 @@ I hope you enjoy it! With love, and with gratitude to the boreh olam, Joshua Spo
                         UserDefaults.standard.set(version, forKey: versionLastRunKey)
                     }
                     Spacer()
-                    Button("Donate") {}
+                    Button("Donate") {}.disabled(true)
                     Spacer()
                 }
             }

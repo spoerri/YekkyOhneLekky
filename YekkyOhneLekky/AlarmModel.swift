@@ -10,18 +10,18 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
-    var nextDayToFire: Date? //could be nil because there's an explicit alarm for that date this year
+    var nextDayToFire: Date? //could be nil because there's an explicit alarm for that date this year. TODO split into separate bool? currently isn't sorted properly
     var isEnabled: Bool
     var isGrouped: Bool
     var daysOfWeek: Set<String>
     var selectedSound: String?
     var createdAt: Date
-    var duration: TimeInterval
+    var duration: TimeInterval?
     var repetitions: Int
     var repetitionDelay: TimeInterval
-    var alarmType: Int //sad, maybe one day we'll be able to use the enum type here
+    var alarmType: AlarmType
     
-    init(name: String, ids: Array<UUID> = Array(), hour: Int, minute: Int, nextDayToFire: Date?, isEnabled: Bool = true, isGrouped: Bool = true, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), hour: Int, minute: Int, nextDayToFire: Date? = Date(), isEnabled: Bool = true, isGrouped: Bool = false, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
@@ -35,28 +35,45 @@ class AlarmModel {
         self.duration = duration
         self.repetitions = repetitions
         self.repetitionDelay = repetitionDelay
-        self.alarmType = (AlarmLogic.allDaysOfWeek.contains(name) ? AlarmType.dayOfWeek : AlarmType.yomtov).rawValue
+        self.alarmType = alarmType
     }
     
     var timeString: String {
+        if let earliest = getEarliestTimeIfEarlier() {
+            return String(format: "%02d", earliest[0])+":"+String(format: "%02d", earliest[1])
+        }
         return String(format: "%02d", hour)+":"+String(format: "%02d", minute)
-//        let formatter = DateFormatter()
-//        formatter.timeStyle = .short
-//        let date = getAlarmDate() ?? Date()
-//        return formatter.string(from: date)
+    }
+    
+    private func getEarliestTimeIfEarlier() -> [Int]? {
+        if let earliest = AlarmLogic.getEarliest(nextDayToFire) {
+            if let earliestOffset = Calendar.current.date(byAdding: .minute, value: -30, to: earliest) { //TODO expose the config
+                let earliestMinute = Calendar.current.component(.minute, from: earliestOffset)
+                let earliestHour = Calendar.current.component(.hour, from: earliestOffset)
+                if earliestHour > hour || (earliestHour == hour && earliestMinute > minute) {
+                    return [earliestHour, earliestMinute]
+                }
+            }
+        }
+        return nil
     }
     
     func getAlarmDate() -> Date? {
         if let n = nextDayToFire {
-            return Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: n, matchingPolicy: .nextTime)
+            if let earliest = getEarliestTimeIfEarlier() {
+                return getAlarmDate(n, earliest[0], earliest[1])
+            }
+            return getAlarmDate(n)
         } else {
             return nil
         }
     }
     
-    static let dayOfWeek = AlarmType.dayOfWeek.rawValue
-    static let explicit = AlarmType.explicit.rawValue
-    static let yomtov = AlarmType.yomtov.rawValue
+    func getAlarmDate(_ arbitraryDay: Date, _ h: Int? = nil, _ m: Int? = nil) -> Date? {
+        return Calendar.current.date(bySettingHour: h ?? hour, minute: m ?? minute, second:0, of: arbitraryDay, matchingPolicy: .nextTime)
+    }
+    
+    var isExplicit: Bool { return alarmType == .explicit }
     
     func unschedule() {
         if isEnabled {
@@ -69,15 +86,29 @@ class AlarmModel {
             }
         }
     }
+    
+    func setNameFromDaysOfWeek() {
+        if (daysOfWeek.count == 6) {
+            name = "Sun-Fri" //otherwise it's too long
+            return
+        }
+        let shortened = Set(daysOfWeek.map{String($0.prefix(3))})
+        name = Calendar.current.shortWeekdaySymbols.filter{shortened.contains($0)}.joined(separator: ",")
+        //TODO store ints instead of names, and use the other swift array
+    }
 }
 
 enum AlarmType: Int, Codable, Comparable {
     case explicit = 0
-    case yomtov = 1 //shabbos should be treated as chag for most things
-    case minor = 2
-    case legal = 3
-    case roshchodesh = 4
-    case dayOfWeek = 5
+    case yomTov = 1
+    case saturday = 2
+    case national = 3
+    case minor = 5
+    case fast = 4
+    case cholHamoed = 6
+    case roshChodesh = 7
+    case weekDay = 8
+    //TODO future proof it somehow? maybe separate precedence field
 
      static func ==(lhs: AlarmType, rhs: AlarmType) -> Bool {
         return lhs.rawValue == rhs.rawValue

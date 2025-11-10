@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		031B7DC12EC442530065B407 /* Alarm Clock.icon in Resources */ = {isa = PBXBuildFile; fileRef = 031B7DC02EC442530065B407 /* Alarm Clock.icon */; };
 		03A8C0A82E80AF2100EA0572 /* Hebcal in Frameworks */ = {isa = PBXBuildFile; productRef = 03A8C0A72E80AF2100EA0572 /* Hebcal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		031B7DC02EC442530065B407 /* Alarm Clock.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Alarm Clock.icon"; sourceTree = "<group>"; };
 		03AFC12F2E80AA8300F106C8 /* YekkyOhneLekky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = YekkyOhneLekky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -55,6 +57,7 @@
 		03AFC1262E80AA8300F106C8 = {
 			isa = PBXGroup;
 			children = (
+				031B7DC02EC442530065B407 /* Alarm Clock.icon */,
 				03AFC1312E80AA8300F106C8 /* YekkyOhneLekky */,
 				03FF4D0C2E80EF1000A03924 /* Test */,
 				03AFC1302E80AA8300F106C8 /* Products */,
@@ -137,6 +140,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				031B7DC12EC442530065B407 /* Alarm Clock.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -206,6 +210,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "";
+				INFOPLIST_KEY_NSLocationTemporaryUsageDescriptionDictionary = "";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "YekkyOhneLekky uses your location to calculate sunrise.";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -264,6 +272,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "";
+				INFOPLIST_KEY_NSLocationTemporaryUsageDescriptionDictionary = "";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "YekkyOhneLekky uses your location to calculate sunrise.";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -277,7 +289,7 @@
 		03AFC13B2E80AA8600F106C8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = Jacket;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Alarm Clock";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -312,7 +324,7 @@
 		03AFC13C2E80AA8600F106C8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = Jacket;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "Alarm Clock";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

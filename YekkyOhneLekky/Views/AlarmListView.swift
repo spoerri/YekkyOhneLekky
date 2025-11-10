@@ -6,7 +6,7 @@ import AlarmKit
 struct AlarmListView: View {
     @Binding var showModal: Bool
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: [SortDescriptor(\AlarmModel.alarmType), SortDescriptor(\AlarmModel.nextDayToFire)]) private var alarms: [AlarmModel]
+    @Query(sort: \AlarmModel.nextDayToFire) private var alarms: [AlarmModel]
     @State private var editingAlarm: AlarmModel?
     
     var body: some View {
@@ -26,7 +26,7 @@ struct AlarmListView: View {
                             alarm.isEnabled = false
                             alarm.unschedule()
                         }
-                    }
+                    }.sensoryFeedback(.warning, trigger: alarms)
                     .foregroundColor(.red)
                     .frame(width: 180, alignment: .leading)
                     .padding()
@@ -45,11 +45,10 @@ struct AlarmListView: View {
                 EditAlarmView(editingAlarm: alarm)
             }
             .task {
-                let explicit: Int = AlarmModel.explicit
-                do {
-                    try modelContext.delete(model: AlarmModel.self, where: #Predicate { $0.alarmType == explicit && !$0.isEnabled }) //TODO error: forcedunwrap?
-                } catch {
-                    print("couldn't delete old one off alarms: \(error)")
+                for alarm in alarms {
+                    if alarm.isEnabled && alarm.alarmType == .explicit {
+                        modelContext.delete(alarm)
+                    }
                 }
                 await AlarmLogic.initializeAlarms(modelContext: modelContext, alarms: alarms)
             }
