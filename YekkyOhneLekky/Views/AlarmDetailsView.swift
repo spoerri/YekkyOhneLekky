@@ -8,17 +8,36 @@ struct AlarmDetailsView: View {
     @Binding var repetitions: Int
     @Binding var repetitionDelay: TimeInterval
     @Binding var isEnabled: Bool
+    @Binding var isOverridden: Bool
     @Binding var isGrouped: Bool
     @Binding var nextDayToFire: Date
     @Binding var daysOfWeek: Set<String>
     @State private var initialSelectedTime: Date = Date.distantPast
     
+    private var dateFormatter: DateFormatter {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .none
+                return formatter
+            }
+    
     var body: some View {
         Section(header: Text("Alarm Details")) {
             if alarmName != AlarmLogic.Once || isEnabled {
-                DatePicker(alarmName != AlarmLogic.Once && alarmType != .explicit ? "Next date" : "Date",
-                           selection: $nextDayToFire, displayedComponents: .date)
-                    .disabled(alarmName != AlarmLogic.Once && alarmType != .explicit)
+//                DatePicker(alarmName != AlarmLogic.Once && alarmType != .explicit ? "Next date" : "Date",
+//                           selection: $nextDayToFire, displayedComponents: .date)
+//                    .disabled(alarmName != AlarmLogic.Once && alarmType != .explicit)
+                
+                
+                if alarmName == AlarmLogic.Once || alarmType == .explicit {
+                        DatePicker("Date", selection: $nextDayToFire, displayedComponents: .date)
+                } else {
+                    HStack {
+                        Text("Next date:")
+                        Text(nextDayToFire, formatter: dateFormatter)
+                            .strikethrough(isOverridden).frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                }
             }
             DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
                 .onChange(of: selectedTime, initial: true) { //false doesn't work, so use initialSelectedTime var

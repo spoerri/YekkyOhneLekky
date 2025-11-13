@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import AppIntents
 import BackgroundTasks
+import AlarmKit
 
 @main
 struct YekkyOhneLekkyApp: App {
@@ -12,7 +13,10 @@ struct YekkyOhneLekkyApp: App {
     init() {
         do {
             container = try ModelContainer(for: AlarmModel.self)
-//            try container.mainContext.delete(model: AlarmModel.self) //only in dev
+            if false {  //only in dev
+                try container.erase()
+            }
+            try print("Configured alarms:",container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled && !$0.isOverridden}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", "))
         } catch {
             fatalError("Failed to initialize ModelContainer")
         }
@@ -74,4 +78,9 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     public init() {
         self.alarmID = ""
     }
+}
+
+enum AlarmError: Error, Sendable {
+    case permissionDenied
+    case ugh
 }

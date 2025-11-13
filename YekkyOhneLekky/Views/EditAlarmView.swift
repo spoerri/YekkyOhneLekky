@@ -11,6 +11,7 @@ struct EditAlarmView: View {
     
     let editingAlarm: AlarmModel?
     
+    //TODO reduce boilerplate?
     @State private var alarmName = ""
     @State private var alarmType = AlarmType.explicit
     @State private var selectedTime = Date()
@@ -18,8 +19,9 @@ struct EditAlarmView: View {
     @State private var repetitions: Int = -1
     @State private var repetitionDelay: TimeInterval = -1
     @State private var isEnabled: Bool = true
+    @State private var isOverridden: Bool = true
     @State private var isGrouped: Bool = true
-    @State private var nextDayToFire = Date()
+    @State private var nextDayToFire: Date = Date()
     @State private var daysOfWeek = Set<String>()
     @State private var showPermissionsDeniedAlert = false
     @State private var selectedSound: String?
@@ -39,6 +41,7 @@ struct EditAlarmView: View {
                     repetitions: $repetitions,
                     repetitionDelay: $repetitionDelay,
                     isEnabled: $isEnabled,
+                    isOverridden: $isOverridden,
                     isGrouped: $isGrouped,
                     nextDayToFire: $nextDayToFire,
                     daysOfWeek: $daysOfWeek
@@ -50,7 +53,11 @@ struct EditAlarmView: View {
             .onTapGesture {
             }
             .onAppear {
-                loadAlarmData()
+                do {
+                    try loadAlarmData()
+                } catch {
+                    print("Could not load alarm data") //TODO dialog
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -75,13 +82,14 @@ struct EditAlarmView: View {
         }
     }
     
-    private func loadAlarmData() {
+    private func loadAlarmData() throws {
         guard let alarm = editingAlarm else { return }
         
         alarmName = alarm.name
         alarmType = alarm.alarmType
         selectedSound = alarm.selectedSound
         isEnabled = alarm.isEnabled
+        isOverridden = alarm.isOverridden
         isGrouped = alarm.isGrouped
         daysOfWeek = alarm.daysOfWeek
         
@@ -95,7 +103,7 @@ struct EditAlarmView: View {
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
-        nextDayToFire = AlarmLogic.getNextDayToFire(alarm) ?? Date()
+        nextDayToFire = try AlarmLogic.getNextDayToFire(alarm)
     }
     
     @MainActor
@@ -104,6 +112,11 @@ struct EditAlarmView: View {
             try await requestAlarmAuthorization()
             
             if let editingAlarm = editingAlarm {
+                try AlarmLogic.disablePastOneOffs(modelContext) //to avoid previous alarm today from overriding
+                AlarmLogic.printScheduledAlarms()
+                if !isEnabled || (editingAlarm.nextDayToFire != nextDayToFire && alarmName != AlarmLogic.Once) {
+                    try await AlarmLogic.unoverride(modelContext, editingAlarm.nextDayToFire)
+                }
                 let calendar = Calendar.current
                 editingAlarm.hour = calendar.component(.hour, from: selectedTime)
                 editingAlarm.minute = calendar.component(.minute, from: selectedTime)
@@ -115,7 +128,8 @@ struct EditAlarmView: View {
                             name: "",
                             alarmType: .weekDay,
                             hour: editingAlarm.hour,
-                            minute: editingAlarm.minute
+                            minute: editingAlarm.minute,
+                            nextDayToFire: nextDayToFire //TODO calculate?
                         )
                         populateAlarm(newAlarm)
                         newAlarm.daysOfWeek = removedDays
@@ -123,11 +137,12 @@ struct EditAlarmView: View {
                         newAlarm.isEnabled = false
                         modelContext.insert(newAlarm)
                     }
-                    for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>()) {
+                    for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { $0.isWeekDay })) {
                         if !daysOfWeek.isDisjoint(with: alarm.daysOfWeek) && alarm != editingAlarm {
                             alarm.unschedule()
                             alarm.daysOfWeek.subtract(daysOfWeek)
                             if alarm.daysOfWeek.isEmpty {
+                                print("dayOfWeek alarm left empty, deleting")
                                 modelContext.delete(alarm)
                             } else {
                                 alarm.setNameFromDaysOfWeek()
@@ -145,27 +160,27 @@ struct EditAlarmView: View {
                         name: dateFormatter.string(from: nextDayToFire),
                         alarmType: AlarmType.explicit,
                         hour: editingAlarm.hour,
-                        minute: editingAlarm.minute
+                        minute: editingAlarm.minute,
+                        nextDayToFire: nextDayToFire
                     )
                     modelContext.insert(newAlarm)
                     populateAlarm(newAlarm)
                     newAlarm.isGrouped = true
                     await AlarmLogic.schedule(newAlarm)
-                } else if isGrouped {
-                    var alarms = Set(try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.isGrouped })))
-                    alarms.insert(editingAlarm)
-                    for alarm in alarms {
-                        if alarm.alarmType == editingAlarm.alarmType {
-                            await reschedule(alarm)
+                } else {
+                    if isGrouped {
+                        var alarms = Set(try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.isGrouped })))
+                        for alarm in alarms {
+                            if alarm.alarmType == editingAlarm.alarmType && alarm.name != editingAlarm.name {
+                                await reschedule(alarm)
+                            }
                         }
                     }
-                } else {
                     await reschedule(editingAlarm)
                 }
                 
                 try modelContext.save()
             }
-            
             dismiss()
         } catch {
             print("Error saving alarm: \(error)")
@@ -175,11 +190,10 @@ struct EditAlarmView: View {
     private func reschedule(_ alarm: AlarmModel) async {
         alarm.unschedule()
         if alarm.name != AlarmLogic.Once && alarm.alarmType == AlarmType.explicit {
-            if let nextDayToFire = alarm.nextDayToFire {
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "yyyy-MM-dd"
-                alarm.name = dateFormatter.string(from: nextDayToFire)
-            }
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            alarm.name = dateFormatter.string(from: nextDayToFire)
+            alarm.nextDayToFire = nextDayToFire
         }
         populateAlarm(alarm)
         await AlarmLogic.schedule(alarm)
@@ -187,6 +201,7 @@ struct EditAlarmView: View {
     
     private func populateAlarm(_ alarm: AlarmModel) {
         alarm.isEnabled = isEnabled
+        alarm.isOverridden = isOverridden
         alarm.isGrouped = isGrouped
         alarm.daysOfWeek = daysOfWeek
         alarm.selectedSound = selectedSound
@@ -212,11 +227,6 @@ struct EditAlarmView: View {
             throw AlarmError.permissionDenied
         }
     }
-}
-
-enum AlarmError: Error, Sendable {
-    case permissionDenied
-    case ugh
 }
 
 #Preview {

@@ -3,38 +3,4 @@
    uuid = "E68F129F-805B-47B0-9A6D-77A2802981C8"
    type = "1"
    version = "2.0">
-   <Breakpoints>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "60A1B34E-B37D-426D-BAC9-8FAAADFD46B7"
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../../../var/folders/_1/mq7m5dhj65128ymdk7v7_0nm0000gn/T/swift-generated-sources/@__swiftmacro_14YekkyOhneLekky0024HolidayAlarmsswift_ynAHffMX49_91_9PredicatefMf_.swift"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1"
-            endingLineNumber = "1"
-            landmarkName = "scheduleAlarm(alarm:)"
-            landmarkType = "37">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "C877DB5B-F296-4DB1-B571-89AD73921A64"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "YekkyOhneLekky/AlarmLogic.swift"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "154"
-            endingLineNumber = "154"
-            landmarkName = "schedule(_:)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-   </Breakpoints>
 </Bucket>

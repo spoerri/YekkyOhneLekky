@@ -50,6 +50,13 @@
             ReferencedContainer = "container:YekkyOhneLekky.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "TZ"
+            value = "UTC-4"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

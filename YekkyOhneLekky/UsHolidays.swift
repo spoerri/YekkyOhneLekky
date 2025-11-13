@@ -15,7 +15,7 @@ enum UsHolidays: String, CaseIterable {
     case christmasDay = "Xmas"
 
     // Function to calculate the date of the holiday for a given year
-    func date(in year: Int, using calendar: Calendar = .current) -> Date? {
+    func date(in year: Int, using calendar: Calendar = .current) throws -> Date {
         var components = DateComponents()
         components.year = year
         
@@ -34,7 +34,7 @@ enum UsHolidays: String, CaseIterable {
         case .goodFriday:
             // Good Friday is two days before Easter Sunday
             // Calculating Easter requires a specific algorithm (Gregorian Easter calculation)
-            return calculateGoodFriday(in: year, using: calendar)
+            return try calculateGoodFriday(in: year, using: calendar)
         case .memorialDay:
             components.month = 5
             components.weekday = 2 // Monday
@@ -75,13 +75,15 @@ enum UsHolidays: String, CaseIterable {
                 }
             }
         }
-        
+        guard let date = date else {
+            throw AlarmError.ugh
+        }
         return date
     }
 }
 
 /// Helper function to calculate the date of Good Friday (using Gregorian algorithm for Easter)
-func calculateGoodFriday(in year: Int, using calendar: Calendar) -> Date? {
+func calculateGoodFriday(in year: Int, using calendar: Calendar) throws -> Date {
     // Implementing the Meeus/Jones/Butcher Gregorian Easter calculation algorithm
     let a = year % 19
     let b = year / 100
@@ -104,9 +106,13 @@ func calculateGoodFriday(in year: Int, using calendar: Calendar) -> Date? {
     components.day = day
     
     guard let easterSunday = calendar.date(from: components) else {
-        return nil
+        throw AlarmError.ugh
     }
     
     // Good Friday is 2 days before Easter Sunday
-    return calendar.date(byAdding: .day, value: -2, to: easterSunday)
+    guard let goodFriday = calendar.date(byAdding: .day, value: -2, to: easterSunday) else {
+        throw AlarmError.ugh
+    }
+    
+    return goodFriday
 }

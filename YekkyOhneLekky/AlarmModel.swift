@@ -10,8 +10,9 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
-    var nextDayToFire: Date? //could be nil because there's an explicit alarm for that date this year. TODO split into separate bool? currently isn't sorted properly
+    var nextDayToFire: Date
     var isEnabled: Bool
+    var isOverridden: Bool
     var isGrouped: Bool
     var daysOfWeek: Set<String>
     var selectedSound: String?
@@ -20,14 +21,17 @@ class AlarmModel {
     var repetitions: Int
     var repetitionDelay: TimeInterval
     var alarmType: AlarmType
+    var isExplicit: Bool
+    var isWeekDay: Bool
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), hour: Int, minute: Int, nextDayToFire: Date? = Date(), isEnabled: Bool = true, isGrouped: Bool = false, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), hour: Int, minute: Int, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isGrouped: Bool = false, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
         self.minute = minute
         self.nextDayToFire = nextDayToFire
         self.isEnabled = isEnabled
+        self.isOverridden = isOverridden
         self.isGrouped = isGrouped
         self.daysOfWeek = daysOfWeek
         self.createdAt = Date()
@@ -36,12 +40,15 @@ class AlarmModel {
         self.repetitions = repetitions
         self.repetitionDelay = repetitionDelay
         self.alarmType = alarmType
+        
+        self.isExplicit = alarmType == .explicit
+        self.isWeekDay = alarmType == .weekDay
     }
     
     var timeString: String {
-        if let earliest = getEarliestTimeIfEarlier() {
-            return String(format: "%02d", earliest[0])+":"+String(format: "%02d", earliest[1])
-        }
+//        if let earliest = getEarliestTimeIfEarlier() {
+//            return String(format: "%02d", earliest[0])+":"+String(format: "%02d", earliest[1])
+//        }
         return String(format: "%02d", hour)+":"+String(format: "%02d", minute)
     }
     
@@ -58,28 +65,26 @@ class AlarmModel {
         return nil
     }
     
-    func getAlarmDate() -> Date? {
-        if let n = nextDayToFire {
-            if let earliest = getEarliestTimeIfEarlier() {
-                return getAlarmDate(n, earliest[0], earliest[1])
-            }
-            return getAlarmDate(n)
-        } else {
-            return nil
-        }
+    func getAlarmDate() throws -> Date {
+//        if let earliest = getEarliestTimeIfEarlier() {
+//            return try getAlarmDate(nextDayToFire, earliest[0], earliest[1])
+//        }
+        return try getAlarmDate(nextDayToFire)
     }
     
-    func getAlarmDate(_ arbitraryDay: Date, _ h: Int? = nil, _ m: Int? = nil) -> Date? {
-        return Calendar.current.date(bySettingHour: h ?? hour, minute: m ?? minute, second:0, of: arbitraryDay, matchingPolicy: .nextTime)
+    func getAlarmDate(_ arbitraryDay: Date, _ h: Int? = nil, _ m: Int? = nil) throws -> Date {
+        guard let fullDate = Calendar.current.date(bySettingHour: h ?? hour, minute: m ?? minute, second:0, of: arbitraryDay, matchingPolicy: .nextTime) else { throw AlarmError.ugh }
+        return fullDate
     }
-    
-    var isExplicit: Bool { return alarmType == .explicit }
     
     func unschedule() {
         if isEnabled {
             do {
                 for id in ids {
-                    try AlarmManager.shared.stop(id: id)
+                    if try AlarmManager.shared.alarms.contains(where: { $0.id == id }) {
+                        print("Unscheduling", id)
+                        try AlarmManager.shared.stop(id: id)
+                    }
                 }
             } catch {
                 print("could not cancel \(id)")

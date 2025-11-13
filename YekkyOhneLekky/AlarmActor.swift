@@ -13,12 +13,15 @@ actor AlarmActor {
     func scheduleNextAlarms() async throws {
         print("Rescheduling")
         for alarm in try ModelContext(modelContainer).fetch(FetchDescriptor<AlarmModel>()) {
-            if alarm.isExplicit {
-//                    alarm.isEnabled = false
-                modelContext.delete(alarm)
-                continue
-            }
             await AlarmLogic.schedule(alarm)
+        }
+        //only delete expired alarms _after_ we schedule next alarms, because today's alarm could've been overridden by an expired
+        for alarm in try ModelContext(modelContainer).fetch(FetchDescriptor<AlarmModel>()) {
+            if alarm.isExplicit && alarm.name != AlarmLogic.Once && alarm.nextDayToFire < Date() {
+                print("one off alarm expired")
+                alarm.isEnabled = false
+//                modelContext.delete(alarm) //TODO why doesn't this work?
+            }
         }
         try modelContext.save()
     }

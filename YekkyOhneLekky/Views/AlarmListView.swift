@@ -15,6 +15,7 @@ struct AlarmListView: View {
                 ForEach(alarms) { alarm in
                     AlarmRowView(alarm: alarm)
                         .onTapGesture {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             editingAlarm = alarm
                         }
                 }
@@ -39,18 +40,17 @@ struct AlarmListView: View {
                 }
             }
             .onAppear {
-                AlarmActor.createSharedInstance(modelContext: modelContext)
+                AlarmActor.createSharedInstance(modelContext: modelContext) //TODO is this the best way?
             }
             .sheet(item: $editingAlarm) { alarm in
                 EditAlarmView(editingAlarm: alarm)
             }
             .task {
-                for alarm in alarms {
-                    if alarm.isEnabled && alarm.alarmType == .explicit {
-                        modelContext.delete(alarm)
-                    }
+                do {
+                    try await AlarmLogic.initializeAlarms(modelContext: modelContext, alarms: alarms)
+                } catch {
+                    print("Could not initialize") //TODO dialog?
                 }
-                await AlarmLogic.initializeAlarms(modelContext: modelContext, alarms: alarms)
             }
         }
     }
@@ -67,7 +67,7 @@ struct AlarmRowView: View {
                     .frame(width: 180, alignment: .leading)
                     .padding()
                 
-                Text(alarm.isEnabled ? alarm.timeString : "")
+                Text(alarm.isEnabled && !alarm.isOverridden ? alarm.timeString : "")
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
