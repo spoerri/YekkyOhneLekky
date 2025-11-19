@@ -56,14 +56,19 @@ struct AlarmDetailsView: View {
                 Toggle("Configured with other "+groupLabel, isOn: $isGrouped)
             }
             Picker("Duration", selection: $duration) {
-                ForEach(0..<10) { n in
-                    if n == 0 {
-                        Text("30 seconds").tag(TimeInterval(30))
-                    } else {
-                        Text("^[\(n) minutes](inflect: true)").tag(TimeInterval(n*60))
-                    }
-                }
-                Text("n/a").tag(nil as TimeInterval?)
+                Text("30 seconds").tag(TimeInterval(30))
+                Text("1 minute").tag(TimeInterval(60))
+                Text("2 minutes").tag(TimeInterval(120))
+                Text("4 minutes").tag(TimeInterval(240))
+                Text("8 minutes").tag(TimeInterval(480))
+                Text("15 minutes").tag(nil as TimeInterval?)
+//                ForEach(0..<10) { n in
+//                    if n == 0 {
+//                        Text("30 seconds").tag(TimeInterval(30))
+//                    } else {
+//                        Text("^[\(n) minutes](inflect: true)").tag(TimeInterval(n*60))
+//                    }
+//                }
             }.pickerStyle(.menu)
             Picker("Repetitions", selection: $repetitions) {
                 ForEach(0..<10) { n in
@@ -76,13 +81,12 @@ struct AlarmDetailsView: View {
                     }
                 }
             Picker("Repetition delay", selection: $repetitionDelay) {
-                ForEach(0..<10) { n in
-                    if n == 0 {
-                        Text("30 seconds").tag(TimeInterval(30))
-                    } else {
-                        Text("^[\(n) minutes](inflect: true)").tag(TimeInterval(n*60))
-                    }
-                }
+                Text("30 seconds").tag(TimeInterval(30))
+                Text("1 minute").tag(TimeInterval(60))
+                Text("2 minutes").tag(TimeInterval(120))
+                Text("4 minutes").tag(TimeInterval(240))
+                Text("8 minutes").tag(TimeInterval(480))
+                Text("15 minutes").tag(TimeInterval(900))
             }.pickerStyle(.menu).disabled(repetitions == 0)
             if alarmType == .weekDay {
                 StatefulPreviewWrapper() { _ in DaysOfWeekView(selectedDays: $daysOfWeek, alarmName: alarmName) }

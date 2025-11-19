@@ -14,7 +14,7 @@ class AlarmLogic {
     public static nonisolated let RoshChodesh = "Rosh Chodesh"
     public static nonisolated let CholHamoed = "Chol Hamoed"
     public static nonisolated let allDaysOfWeek = Calendar.current.standaloneWeekdaySymbols
-    public static let groupLabel: [AlarmType: String] = [.yomTov: "yomim tovim", .explicit: "one offs", .national: "nationals", .fast: "minor fasts"]
+    public static let groupLabel: [AlarmType: String] = [.yomTov: "yomim tovim", .explicit: "one offs", .national: "nationals", .fast: "fasts"]
     
     public class func getEarliest(_ date: Date?) -> Date? {
         
@@ -148,7 +148,7 @@ class AlarmLogic {
     public class func unoverride(_ modelContext: ModelContext?, _ date: Date) async throws {
         let start = Calendar.current.startOfDay(for: date)
         let stop = start + TimeInterval(60*60*24)
-        if let overriddenAlarm = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.nextDayToFire && other.nextDayToFire <= stop && other.isOverridden && other.isEnabled })).sorted(using: SortDescriptor(\.alarmType)).first {
+        if let overriddenAlarm = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.nextDayToFire && other.nextDayToFire < stop && other.isOverridden })).sorted(using: SortDescriptor(\.alarmType)).first {
             overriddenAlarm.isOverridden = false
             await schedule(overriddenAlarm)
         }
@@ -162,7 +162,7 @@ class AlarmLogic {
         let stop = start+TimeInterval(60*60*24)
         
         if let sameDayAlarms = try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in
-            start <= other.nextDayToFire && other.nextDayToFire <= stop &&
+            start <= other.nextDayToFire && other.nextDayToFire < stop &&
             other.name != alarmName && !other.isOverridden && other.name != Once})) {
             for other in sameDayAlarms {
                 if other.alarmType > alarm.alarmType {

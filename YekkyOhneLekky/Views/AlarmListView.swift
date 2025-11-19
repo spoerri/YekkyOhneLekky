@@ -67,7 +67,8 @@ struct AlarmRowView: View {
                     .frame(width: 180, alignment: .leading)
                     .padding()
                 
-                Text(alarm.isEnabled && !alarm.isOverridden ? alarm.timeString : "")
+                Text(alarm.isEnabled ? alarm.timeString : "")
+                    .strikethrough(alarm.isOverridden)
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

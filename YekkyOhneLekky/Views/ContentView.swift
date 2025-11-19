@@ -33,9 +33,11 @@ YekkyOhneLekky can even relieve you of turning off your regular weekday alarms b
 
 For now, please remember to manually update your alarms for yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
 
-The app should not have to be running in order for alarms to sound, or for subsequent alarms to be scheduled. The only exception is if the app is not running and your phone is entirely off when an alarm is scheduled to run. In this case, just start Yekky after you turn your phone on.
+The app should not have to be running in the background in order for alarms to sound, or for subsequent alarms to be scheduled. The only possible exception is if the app is not running in the background and your phone is entirely off when an alarm is scheduled to run. In this case, to be sure, just start Yekky after you turn your phone on.
 
 Yekky should be smart about multiple alarms occurring on the same day; it prefers the sensible one. “One off”s beat yom tov, yom tov beats shabbos, shabbos beats national holidays, national holidays beat rosh chodesh, and rosh chodesh beats weekdays (e.g. Tuesday). (Fasts and chol hamoed have the same precedence as rosh chodesh. Sundays have the same precedence as national holidays.) The simple explanation is that on “work days”, shacharis is often scheduled to enable people to get to work on time.
+
+After you dismiss this message, you can see it again by scrolling to the bottom of the app. After all the holidays, there is an About button as well as a button to disable all alarms.
 
 I hope you enjoy it!
 

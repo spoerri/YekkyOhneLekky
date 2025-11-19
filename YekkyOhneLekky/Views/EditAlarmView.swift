@@ -114,9 +114,7 @@ struct EditAlarmView: View {
             if let editingAlarm = editingAlarm {
                 try AlarmLogic.disablePastOneOffs(modelContext) //to avoid previous alarm today from overriding
                 AlarmLogic.printScheduledAlarms()
-                if !isEnabled || (editingAlarm.nextDayToFire != nextDayToFire && alarmName != AlarmLogic.Once) {
-                    try await AlarmLogic.unoverride(modelContext, editingAlarm.nextDayToFire)
-                }
+                let isNextDayToFireDifferent = (editingAlarm.isEnabled && !isEnabled) || editingAlarm.nextDayToFire != nextDayToFire
                 let calendar = Calendar.current
                 editingAlarm.hour = calendar.component(.hour, from: selectedTime)
                 editingAlarm.minute = calendar.component(.minute, from: selectedTime)
@@ -169,14 +167,18 @@ struct EditAlarmView: View {
                     await AlarmLogic.schedule(newAlarm)
                 } else {
                     if isGrouped {
-                        var alarms = Set(try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.isGrouped })))
+                        let alarms = Set(try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.isGrouped })))
                         for alarm in alarms {
                             if alarm.alarmType == editingAlarm.alarmType && alarm.name != editingAlarm.name {
-                                await reschedule(alarm)
+                                try await reschedule(alarm)
                             }
                         }
                     }
-                    await reschedule(editingAlarm)
+                    try await reschedule(editingAlarm)
+                }
+                
+                if isNextDayToFireDifferent {
+                    try await AlarmLogic.unoverride(modelContext, editingAlarm.nextDayToFire)
                 }
                 
                 try modelContext.save()
@@ -187,12 +189,18 @@ struct EditAlarmView: View {
         }
     }
     
-    private func reschedule(_ alarm: AlarmModel) async {
+    private func reschedule(_ alarm: AlarmModel) async throws {
         alarm.unschedule()
         if alarm.name != AlarmLogic.Once && alarm.alarmType == AlarmType.explicit {
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
-            alarm.name = dateFormatter.string(from: nextDayToFire)
+            let alarmName = dateFormatter.string(from: nextDayToFire)
+            if alarmName != alarm.name {
+                if let sameNamed = try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.name == alarmName})).first {
+                    alarm.modelContext?.delete(sameNamed)
+                }
+                alarm.name = alarmName
+            }
             alarm.nextDayToFire = nextDayToFire
         }
         populateAlarm(alarm)

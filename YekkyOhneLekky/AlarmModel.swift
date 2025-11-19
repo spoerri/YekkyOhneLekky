@@ -93,12 +93,14 @@ class AlarmModel {
     }
     
     func setNameFromDaysOfWeek() {
-        if (daysOfWeek.count == 6) {
+        if daysOfWeek.count == 6 {
             name = "Sun-Fri" //otherwise it's too long
-            return
+        } else if daysOfWeek.count == 1 {
+            name = daysOfWeek.first!
+        } else {
+            let shortened = Set(daysOfWeek.map{String($0.prefix(3))})
+            name = Calendar.current.shortWeekdaySymbols.filter{shortened.contains($0)}.joined(separator: ",")
         }
-        let shortened = Set(daysOfWeek.map{String($0.prefix(3))})
-        name = Calendar.current.shortWeekdaySymbols.filter{shortened.contains($0)}.joined(separator: ",")
         //TODO store ints instead of names, and use the other swift array
     }
 }
