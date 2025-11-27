@@ -8,6 +8,7 @@ struct AlarmListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \AlarmModel.nextDayToFire) private var alarms: [AlarmModel]
     @State private var editingAlarm: AlarmModel?
+    @State private var showAlert = false
     
     var body: some View {
         NavigationStack {
@@ -31,7 +32,7 @@ struct AlarmListView: View {
                     .foregroundColor(.red)
                     .frame(width: 180, alignment: .leading)
                     .padding()
-                    Button("About") { //TODO is it just me, or is this higher?
+                    Button("About") {
                     }.onTapGesture {
                         showModal.toggle()
                     }
@@ -49,9 +50,14 @@ struct AlarmListView: View {
                 do {
                     try await AlarmLogic.initializeAlarms(modelContext: modelContext, alarms: alarms)
                 } catch {
-                    print("Could not initialize") //TODO dialog?
+                    print("Could not initialize")
+                    showAlert = true
                 }
             }
+        }
+        .alert("Encountered a problem", isPresented: $showAlert) {
+        } message: {
+            Text("Try again, or try something similar")
         }
     }
 }

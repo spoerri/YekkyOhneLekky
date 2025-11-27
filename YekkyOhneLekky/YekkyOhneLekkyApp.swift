@@ -13,9 +13,6 @@ struct YekkyOhneLekkyApp: App {
     init() {
         do {
             container = try ModelContainer(for: AlarmModel.self)
-            if false {  //only in dev
-                try container.erase()
-            }
             try print("Configured alarms:",container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled && !$0.isOverridden}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", "))
         } catch {
             fatalError("Failed to initialize ModelContainer")
@@ -24,7 +21,7 @@ struct YekkyOhneLekkyApp: App {
     
     nonisolated func scheduleAppRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: bgTaskIdentifier)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 6 * 60 * 60)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 6 * 60 * 60) //if the phone is entirely off when an alarm was supposed to ring, perhaps this will handle it, assuming the phone is turned on at least six hours before the next alarm in that categorys should ring
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {

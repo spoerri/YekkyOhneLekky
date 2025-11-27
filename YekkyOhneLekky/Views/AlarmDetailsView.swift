@@ -24,11 +24,6 @@ struct AlarmDetailsView: View {
     var body: some View {
         Section(header: Text("Alarm Details")) {
             if alarmName != AlarmLogic.Once || isEnabled {
-//                DatePicker(alarmName != AlarmLogic.Once && alarmType != .explicit ? "Next date" : "Date",
-//                           selection: $nextDayToFire, displayedComponents: .date)
-//                    .disabled(alarmName != AlarmLogic.Once && alarmType != .explicit)
-                
-                
                 if alarmName == AlarmLogic.Once || alarmType == .explicit {
                         DatePicker("Date", selection: $nextDayToFire, displayedComponents: .date)
                 } else {
@@ -36,24 +31,31 @@ struct AlarmDetailsView: View {
                         Text("Next date:")
                         Text(nextDayToFire, formatter: dateFormatter)
                             .strikethrough(isOverridden).frame(maxWidth: .infinity, alignment: .trailing)
+                        //TODO be clever about two day rosh chodesh?
                     }
                 }
             }
-            DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
-                .onChange(of: selectedTime, initial: true) { //false doesn't work, so use initialSelectedTime var
-                    if alarmName == AlarmLogic.Once {
-                        return
+            if alarmName != AlarmLogic.Once || isEnabled {
+                DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
+                    .onChange(of: selectedTime, initial: true) { //false doesn't work, so use initialSelectedTime var
+                        if initialSelectedTime == Date.distantPast {
+                            initialSelectedTime = selectedTime
+                        } else if selectedTime != initialSelectedTime {
+                            isEnabled = true
+                            initialSelectedTime = selectedTime
+                        }
                     }
-                    if initialSelectedTime == Date.distantPast {
-                        initialSelectedTime = selectedTime
-                    } else if selectedTime != initialSelectedTime {
-                        isEnabled = true
-                        initialSelectedTime = selectedTime
+            }
+            Toggle("Enabled", isOn: $isEnabled)
+                .onChange(of: isEnabled, initial: true) {
+                    if alarmName == AlarmLogic.Once {
+                        isGrouped = isEnabled
                     }
                 }
-            Toggle("Enabled", isOn: $isEnabled)
             if let groupLabel = AlarmLogic.groupLabel[alarmType] {
-                Toggle("Configured with other "+groupLabel, isOn: $isGrouped)
+                if alarmName != AlarmLogic.Once || isEnabled { //the one-off template isn't grouped with the actual one-offs
+                    Toggle("Configured with other "+groupLabel, isOn: $isGrouped)
+                }
             }
             Picker("Duration", selection: $duration) {
                 Text("30 seconds").tag(TimeInterval(30))
@@ -62,13 +64,6 @@ struct AlarmDetailsView: View {
                 Text("4 minutes").tag(TimeInterval(240))
                 Text("8 minutes").tag(TimeInterval(480))
                 Text("15 minutes").tag(nil as TimeInterval?)
-//                ForEach(0..<10) { n in
-//                    if n == 0 {
-//                        Text("30 seconds").tag(TimeInterval(30))
-//                    } else {
-//                        Text("^[\(n) minutes](inflect: true)").tag(TimeInterval(n*60))
-//                    }
-//                }
             }.pickerStyle(.menu)
             Picker("Repetitions", selection: $repetitions) {
                 ForEach(0..<10) { n in

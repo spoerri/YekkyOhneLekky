@@ -12,8 +12,9 @@ struct SoundSelectionView: View {
     //TODO just an array of Strings ?
     private let soundOptions: [(filename: String?, label: String)] = [
         (nil, "Default"),
-        ("Airhorn", "Airhorn"),
         ("First Light", "First Light"),
+        ("Kosher", "Kosher"),
+        ("Airhorn", "Airhorn"),
         ("Early Riser", "Early Riser"),
         ("Helios", "Helios")
     ]

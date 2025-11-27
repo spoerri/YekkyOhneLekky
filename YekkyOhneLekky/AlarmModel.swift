@@ -10,7 +10,7 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
-    var nextDayToFire: Date
+    var nextDayToFire: Date //note that this may or may not have the alarm time in it
     var isEnabled: Bool
     var isOverridden: Bool
     var isGrouped: Bool
@@ -23,8 +23,9 @@ class AlarmModel {
     var alarmType: AlarmType
     var isExplicit: Bool
     var isWeekDay: Bool
+    var isShabbos: Bool
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), hour: Int, minute: Int, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isGrouped: Bool = false, daysOfWeek: Set<String> = Set(), selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
@@ -43,6 +44,7 @@ class AlarmModel {
         
         self.isExplicit = alarmType == .explicit
         self.isWeekDay = alarmType == .weekDay
+        self.isShabbos = alarmType == .saturday
     }
     
     var timeString: String {
@@ -65,14 +67,14 @@ class AlarmModel {
         return nil
     }
     
-    func getAlarmDate() throws -> Date {
+    func getAlarmDateAndTime() throws -> Date {
 //        if let earliest = getEarliestTimeIfEarlier() {
 //            return try getAlarmDate(nextDayToFire, earliest[0], earliest[1])
 //        }
-        return try getAlarmDate(nextDayToFire)
+        return try getAlarmDateAndTime(nextDayToFire)
     }
     
-    func getAlarmDate(_ arbitraryDay: Date, _ h: Int? = nil, _ m: Int? = nil) throws -> Date {
+    func getAlarmDateAndTime(_ arbitraryDay: Date, _ h: Int? = nil, _ m: Int? = nil) throws -> Date {
         guard let fullDate = Calendar.current.date(bySettingHour: h ?? hour, minute: m ?? minute, second:0, of: arbitraryDay, matchingPolicy: .nextTime) else { throw AlarmError.ugh }
         return fullDate
     }
@@ -92,30 +94,36 @@ class AlarmModel {
         }
     }
     
-    func setNameFromDaysOfWeek() {
+    static func nameFromDaysOfWeek(_ daysOfWeek: Set<String>) -> String {
         if daysOfWeek.count == 6 {
-            name = "Sun-Fri" //otherwise it's too long
+            return "Sun-Fri" //otherwise it's too long
         } else if daysOfWeek.count == 1 {
-            name = daysOfWeek.first!
+            return daysOfWeek.first!
         } else {
             let shortened = Set(daysOfWeek.map{String($0.prefix(3))})
-            name = Calendar.current.shortWeekdaySymbols.filter{shortened.contains($0)}.joined(separator: ",")
+            return Calendar.current.shortWeekdaySymbols.filter{shortened.contains($0)}.joined(separator: ",")
         }
         //TODO store ints instead of names, and use the other swift array
+    }
+    
+    func copyConfigFrom(_ alarm: AlarmModel) {
+        selectedSound = alarm.selectedSound
+        duration = alarm.duration
+        repetitions = alarm.repetitions
+        repetitionDelay = alarm.repetitionDelay
     }
 }
 
 enum AlarmType: Int, Codable, Comparable {
     case explicit = 0
-    case yomTov = 1
-    case saturday = 2
-    case national = 3
-    case minor = 5
-    case fast = 4
-    case cholHamoed = 6
-    case roshChodesh = 7
-    case weekDay = 8
-    //TODO future proof it somehow? maybe separate precedence field
+    case yomTov = 10
+    case saturday = 20
+    case national = 30
+    case minor = 40
+    case fast = 50
+    case cholHamoed = 60
+    case roshChodesh = 70
+    case weekDay = 80
 
      static func ==(lhs: AlarmType, rhs: AlarmType) -> Bool {
         return lhs.rawValue == rhs.rawValue
