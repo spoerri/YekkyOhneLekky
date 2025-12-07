@@ -26,7 +26,12 @@ struct AlarmListView: View {
                     }.onTapGesture {
                         for alarm in alarms {
                             alarm.isEnabled = false
-                            alarm.unschedule()
+                            do {
+                                try alarm.unschedule()
+                            } catch {
+                                print("Couldn't disable all")
+                                showAlert = true
+                            }
                         }
                     }.sensoryFeedback(.warning, trigger: alarms)
                     .foregroundColor(.red)

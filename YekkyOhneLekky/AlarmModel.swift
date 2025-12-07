@@ -79,19 +79,18 @@ class AlarmModel {
         return fullDate
     }
     
-    func unschedule() {
-        if isEnabled {
-            do {
-                for id in ids {
-                    if try AlarmManager.shared.alarms.contains(where: { $0.id == id }) {
-                        print("Unscheduling", id)
-                        try AlarmManager.shared.stop(id: id)
-                    }
+    func unschedule() throws {
+        for id in ids {
+            if try AlarmManager.shared.alarms.contains(where: { $0.id == id }) {
+                print("Unscheduling", id)
+                do {
+                    try AlarmManager.shared.stop(id: id)
+                } catch {
+                    print("could not cancel \(id)")
                 }
-            } catch {
-                print("could not cancel \(id)")
             }
         }
+        ids.removeAll()
     }
     
     static func nameFromDaysOfWeek(_ daysOfWeek: Set<String>) -> String {

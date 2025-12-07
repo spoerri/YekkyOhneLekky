@@ -13,7 +13,7 @@ struct SoundSelectionView: View {
     private let soundOptions: [(filename: String?, label: String)] = [
         (nil, "Default"),
         ("First Light", "First Light"),
-        ("Kosher", "Kosher"),
+//        ("Kosher", "Kosher"),
         ("Airhorn", "Airhorn"),
         ("Early Riser", "Early Riser"),
         ("Helios", "Helios")
@@ -71,11 +71,12 @@ struct SoundSelectionView: View {
             try AVAudioSession.sharedInstance().setActive(true)
             
             audioPlayer = try AVAudioPlayer(contentsOf: soundURL)
-            audioPlayer?.delegate = AudioPlayerDelegate {
+            let audioPlayerDelegate = AudioPlayerDelegate {
                 DispatchQueue.main.async {
                     currentlyPlayingSound = nil
                 }
             }
+            audioPlayer?.delegate = audioPlayerDelegate
             
             let success = audioPlayer?.play() ?? false
             if success {
