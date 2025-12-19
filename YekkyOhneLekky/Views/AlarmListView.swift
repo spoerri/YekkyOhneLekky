@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import Hebcal
 import AlarmKit
+import OSLog
 
 struct AlarmListView: View {
     @Binding var showModal: Bool
@@ -29,7 +30,7 @@ struct AlarmListView: View {
                             do {
                                 try alarm.unschedule()
                             } catch {
-                                print("Couldn't disable all")
+                                Logger.shared.info("Couldn't disable all")
                                 showAlert = true
                             }
                         }
@@ -51,11 +52,10 @@ struct AlarmListView: View {
             .sheet(item: $editingAlarm) { alarm in
                 EditAlarmView(editingAlarm: alarm)
             }
-            .task {
-                do {
+            .task {do {
                     try await AlarmLogic.initializeAlarms(modelContext: modelContext, alarms: alarms)
                 } catch {
-                    print("Could not initialize")
+                    Logger.shared.info("Could not initialize")
                     showAlert = true
                 }
             }

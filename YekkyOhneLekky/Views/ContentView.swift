@@ -19,6 +19,7 @@ struct ContentView: View {
 
 struct ModalView: View {
     @Environment(\.dismiss) var dismiss
+    @State private var showLogs = false
 
     var body: some View {
         VStack {
@@ -52,7 +53,13 @@ With love, and with gratitude to the boreh olam, Joshua Spoerri
                         UserDefaults.standard.set(version, forKey: versionLastRunKey)
                     }
                     Spacer()
-                    Button("Donate") {}.disabled(true)
+//                    Button("Donate") {}.disabled(true) //TODO space out this or Logs
+                    Button("Logs") {
+                        showLogs = true
+                    }
+                    .sheet(isPresented: $showLogs) {
+                        LogsViewer()
+                    }
                     Spacer()
                 }
             }

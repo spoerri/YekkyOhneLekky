@@ -1,6 +1,7 @@
 import SwiftData
 import AVFoundation
 import AlarmKit
+import OSLog
 
 @ModelActor
 actor AlarmActor {
@@ -11,10 +12,12 @@ actor AlarmActor {
     }
     
     func scheduleNextAlarms() async throws {
-        print("Rescheduling")
+        Logger.shared.info("Rescheduling")
+        AlarmLogic.printScheduledAlarms()
         for alarm in try ModelContext(modelContainer).fetch(FetchDescriptor<AlarmModel>()) {
             try await AlarmLogic.reschedule(alarm)
         }
         try modelContext.save()
+        AlarmLogic.printScheduledAlarms()
     }
 }

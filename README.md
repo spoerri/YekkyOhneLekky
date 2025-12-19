@@ -1,17 +1,16 @@
 # iphone alarms for shabbat and yom tov
 
-This app is not released yet, and still has significant bugs to be worked out in relation to the new AlarmKit API.
-
-I hope to work it out this month, but as always, buyer beware! :)
-
 ## features
 
 * play alarms for a shorter time than Apple Clock, to reduce annoyance of not dismissing them
-* automatically handle holidays
+* automatically handle holiday-specific alarm times
 * use the new, robust alarm support in ios 26
 
 ## todo
 
 1. donations
-2. legal holidays
-3. fasts etc
+2. national holidays for other than just USA
+3. zmanim for the sake of late alos and early krias shema
+4. schedule all weekdays in advance, to alarm after phone is off for days and app not running
+5. shabboses with early kaj davening, behab
+6. display two days for Next date for two day rosh chodesh 

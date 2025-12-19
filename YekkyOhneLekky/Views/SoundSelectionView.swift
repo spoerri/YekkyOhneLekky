@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import OSLog
 
 //TODO more sound choices
 //TODO user specified sound file?
@@ -56,14 +57,14 @@ struct SoundSelectionView: View {
     }
     
     private func playSound(_ filename: String) {
-        print("🎵 Attempting to play sound: \(filename)")
+        Logger.shared.info("🎵 Attempting to play sound: \(filename)")
         
         guard let soundURL = Bundle.main.url(forResource: filename, withExtension: "mp3") else {
-            print("❌ Could not find sound file: \(filename).mp3")
+            Logger.shared.info("❌ Could not find sound file: \(filename).mp3")
             return
         }
         
-        print("✅ Found sound file at: \(soundURL)")
+        Logger.shared.info("✅ Found sound file at: \(soundURL)")
         
         do {
             // Set up audio session for playback
@@ -81,12 +82,12 @@ struct SoundSelectionView: View {
             let success = audioPlayer?.play() ?? false
             if success {
                 currentlyPlayingSound = filename
-                print("✅ Started playing: \(filename)")
+                Logger.shared.info("✅ Started playing: \(filename)")
             } else {
-                print("❌ Failed to start playback")
+                Logger.shared.info("❌ Failed to start playback")
             }
         } catch {
-            print("❌ Error playing sound: \(error)")
+            Logger.shared.info("❌ Error playing sound: \(error)")
         }
     }
     
@@ -139,12 +140,12 @@ private class AudioPlayerDelegate: NSObject, AVAudioPlayerDelegate {
     }
     
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        print("🎵 Audio playback finished successfully: \(flag)")
+        Logger.shared.info("🎵 Audio playback finished successfully: \(flag)")
         onFinish()
     }
     
     func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
-        print("❌ Audio decode error: \(error?.localizedDescription ?? "Unknown")")
+        Logger.shared.info("❌ Audio decode error: \(error?.localizedDescription ?? "Unknown")")
         onFinish()
     }
 }

@@ -4,6 +4,7 @@ import SwiftData
 import AlarmKit
 import Foundation
 import Hebcal
+import OSLog
 
 struct EditAlarmView: View {
     @Environment(\.modelContext) private var modelContext
@@ -56,7 +57,7 @@ struct EditAlarmView: View {
                 do {
                     try loadAlarmData()
                 } catch {
-                    print("Could not load alarm data") //TODO dialog
+                    Logger.shared.info("Could not load alarm data") //TODO dialog
                 }
             }
             .toolbar {
@@ -130,7 +131,7 @@ struct EditAlarmView: View {
             }
             dismiss()
         } catch {
-            print("Error saving alarm: \(error)")
+            Logger.shared.info("Error saving alarm: \(error)")
         }
     }
     

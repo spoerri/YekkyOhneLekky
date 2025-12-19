@@ -3,6 +3,7 @@ import SwiftData
 import SwiftUI
 import AVFoundation
 import AlarmKit
+import OSLog
 
 @Model
 class AlarmModel {
@@ -82,11 +83,11 @@ class AlarmModel {
     func unschedule() throws {
         for id in ids {
             if try AlarmManager.shared.alarms.contains(where: { $0.id == id }) {
-                print("Unscheduling", id)
+                Logger.shared.notice("Unscheduling \(id, privacy: .public)")
                 do {
                     try AlarmManager.shared.stop(id: id)
                 } catch {
-                    print("could not cancel \(id)")
+                    Logger.shared.info("could not cancel \(id)")
                 }
             }
         }

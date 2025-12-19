@@ -3,6 +3,15 @@ import SwiftData
 import AppIntents
 import BackgroundTasks
 import AlarmKit
+import OSLog
+
+extension Logger {
+    /// Using your bundle identifier is a great way to ensure a unique identifier.
+    private static var subsystem = Bundle.main.bundleIdentifier!
+    
+    /// Logs the view cycles like a view that appeared.
+    static nonisolated let shared = Logger(subsystem: subsystem, category: "foo")
+}
 
 @main
 struct YekkyOhneLekkyApp: App {
@@ -13,7 +22,8 @@ struct YekkyOhneLekkyApp: App {
     init() {
         do {
             container = try ModelContainer(for: AlarmModel.self)
-            try print("Configured alarms:",container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled && !$0.isOverridden}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", "))
+            let configuredAlarms = try container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled && !$0.isOverridden}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", ")
+            Logger.shared.info("Configured alarms: \(configuredAlarms)")
         } catch {
             fatalError("Failed to initialize ModelContainer")
         }
@@ -25,7 +35,7 @@ struct YekkyOhneLekkyApp: App {
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            print("Could not schedule app refresh: \(error)")
+            Logger.shared.notice("Could not schedule app refresh: \(error)")
         }
     }
     
@@ -60,7 +70,7 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
         do {
             try await AlarmActor.shared.scheduleNextAlarms()
         } catch {
-            print("Error scheduling next alarms")
+            Logger.shared.info("Error scheduling next alarms")
         }
         return .result()
     }
@@ -81,3 +91,4 @@ enum AlarmError: Error, Sendable {
     case permissionDenied
     case ugh
 }
+
