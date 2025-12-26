@@ -104,7 +104,7 @@ struct EditAlarmView: View {
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
-        nextDayToFire = try AlarmLogic.getNextDayToFire(alarm)
+        nextDayToFire = try AlarmLogic.getNextDayToFire(Date(), alarm)
     }
     
     @MainActor
@@ -127,7 +127,7 @@ struct EditAlarmView: View {
                 editingAlarm.minute = Calendar.current.component(.minute, from: selectedTime)
                 editingAlarm.nextDayToFire = nextDayToFire
                 //TODO should actually not save any changes if there's an exception in AlarmLogic
-                try await AlarmLogic.saveAlarm(editingAlarm, originalDaysOfWeek, originalDayToFire)
+                try await AlarmLogic.saveAlarm(Date(), editingAlarm, originalDaysOfWeek, originalDayToFire)
             }
             dismiss()
         } catch {

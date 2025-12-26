@@ -56,7 +56,7 @@ class AlarmModel {
     }
     
     private func getEarliestTimeIfEarlier() -> [Int]? {
-        if let earliest = AlarmLogic.getEarliest(nextDayToFire) {
+        if let earliest = AlarmLogic.getEarliest(Date(), nextDayToFire) {
             if let earliestOffset = Calendar.current.date(byAdding: .minute, value: -30, to: earliest) { //TODO expose the config
                 let earliestMinute = Calendar.current.component(.minute, from: earliestOffset)
                 let earliestHour = Calendar.current.component(.hour, from: earliestOffset)

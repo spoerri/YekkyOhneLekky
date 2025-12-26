@@ -53,7 +53,7 @@ struct AlarmListView: View {
                 EditAlarmView(editingAlarm: alarm)
             }
             .task {do {
-                    try await AlarmLogic.initializeAlarms(modelContext: modelContext, alarms: alarms)
+                    try await AlarmLogic.initializeAlarms(Date(), modelContext: modelContext, alarms: alarms)
                 } catch {
                     Logger.shared.info("Could not initialize")
                     showAlert = true
