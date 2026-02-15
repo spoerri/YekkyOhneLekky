@@ -30,7 +30,7 @@ YekkyOhneLekky provides shabbos and yom tov wake-up alarms that don't bother peo
 
 YekkyOhneLekky also automatically sets jewish holiday alarms appropriately based on the jewish calendar. If you go to the same minyan for each holiday from year to year, you'll never have to worry about resetting that alarm; it'll continue to ring at the same time automatically on the right date each year.
 
-YekkyOhneLekky can even relieve you of turning off your regular weekday alarms before holidays. Put those alarms in Yekky instead of Apple's standard Clock, and they'll only be used on non-holidays. It supports alarms for US national holidays, as well as rosh chodesh, fasts, and holidays without an issur melacha. It also supports "one off" alarms that override any of the above. You can use this feature to test alarms when you first start using the app.
+YekkyOhneLekky can even relieve you of turning off your regular weekday alarms before holidays. Put those alarms in Yekky instead of Apple's standard Clock, and they'll only be used on non-holidays. It supports different alarms for US national holidays, as well as rosh chodesh, fasts, and holidays without an issur melacha. It also supports "one off" alarms that override any of the above. You can use this feature to test alarms when you first start using the app.
 
 For now, please remember to manually update your alarms for yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
 
@@ -46,7 +46,7 @@ With love, and with gratitude to the boreh olam, Joshua Spoerri
 """).padding()
                 HStack {
                     Spacer()
-                    Link("Contact me", destination: URL(string: "mailto:spoerri@gmail.com?subject=YekkyOhneLekky    ")!)
+                    Link("Contact me", destination: URL(string: "mailto:spoerri@gmail.com?subject=YekkyOhneLekky")!)
                     Spacer()
                     Button("Dismiss") {
                         dismiss()
@@ -58,7 +58,7 @@ With love, and with gratitude to the boreh olam, Joshua Spoerri
                         showLogs = true
                     }
                     .sheet(isPresented: $showLogs) {
-                        LogsViewer()
+                        LogView()
                     }
                     Spacer()
                 }

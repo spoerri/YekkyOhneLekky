@@ -7,6 +7,8 @@ import OSLog
 struct AlarmListView: View {
     @Binding var showModal: Bool
     @Environment(\.modelContext) private var modelContext
+    //TODO sort the weekdays to the top?
+    //TODO resort the holidays that are not enabled?
     @Query(sort: \AlarmModel.nextDayToFire) private var alarms: [AlarmModel]
     @State private var editingAlarm: AlarmModel?
     @State private var showAlert = false
@@ -46,14 +48,13 @@ struct AlarmListView: View {
                     .padding()
                 }
             }
-            .onAppear {
-                AlarmActor.createSharedInstance(modelContext: modelContext) //TODO is this the best way?
-            }
             .sheet(item: $editingAlarm) { alarm in
                 EditAlarmView(editingAlarm: alarm)
             }
-            .task {do {
-                    try await AlarmLogic.initializeAlarms(Date(), modelContext: modelContext, alarms: alarms)
+            .task {
+                AlarmActor.createSharedInstance(modelContext: modelContext) //TODO is this the best way?
+                do {
+                    try await AlarmLogic.initializeAlarms(Testable.Date(), modelContext: modelContext, alarms: alarms)
                 } catch {
                     Logger.shared.info("Could not initialize")
                     showAlert = true

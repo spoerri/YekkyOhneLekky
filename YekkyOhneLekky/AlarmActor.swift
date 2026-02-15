@@ -15,7 +15,7 @@ actor AlarmActor {
         Logger.shared.info("Rescheduling")
         AlarmLogic.printScheduledAlarms()
         for alarm in try ModelContext(modelContainer).fetch(FetchDescriptor<AlarmModel>()) {
-            try await AlarmLogic.reschedule(Date(), alarm)
+            try await AlarmLogic.reschedule(Testable.Date(), alarm)
         }
         try modelContext.save()
         AlarmLogic.printScheduledAlarms()

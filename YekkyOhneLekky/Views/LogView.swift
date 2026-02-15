@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 import SwiftUI
 
-struct LogsViewer: View {
+struct LogView: View {
     @Environment(\.dismiss) private var dismiss
     let logs: [OSLogEntryLog]
 

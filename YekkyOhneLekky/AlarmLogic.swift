@@ -385,7 +385,7 @@ class AlarmLogic {
             }
 //            Logger.shared.info("Using sound: \(soundConfig)")
             
-            var date = try alarm.getAlarmDateAndTime()
+            var date = try alarm.getAlarmDateAndTime(now)
             
             if date < now {
                 return

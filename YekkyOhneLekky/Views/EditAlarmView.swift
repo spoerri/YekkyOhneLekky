@@ -6,6 +6,8 @@ import Foundation
 import Hebcal
 import OSLog
 
+//TODO allow overriding the date for manual testing, here and AlarmListView and AlarmActor
+
 struct EditAlarmView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -15,14 +17,14 @@ struct EditAlarmView: View {
     //TODO reduce boilerplate?
     @State private var alarmName = ""
     @State private var alarmType = AlarmType.explicit
-    @State private var selectedTime = Date()
+    @State private var selectedTime = Testable.Date()
     @State private var duration: TimeInterval?
     @State private var repetitions: Int = -1
     @State private var repetitionDelay: TimeInterval = -1
     @State private var isEnabled: Bool = true
     @State private var isOverridden: Bool = true
     @State private var isGrouped: Bool = true
-    @State private var nextDayToFire: Date = Date()
+    @State private var nextDayToFire: Date = Testable.Date()
     @State private var daysOfWeek = Set<String>()
     @State private var showPermissionsDeniedAlert = false
     @State private var selectedSound: String?
@@ -96,15 +98,15 @@ struct EditAlarmView: View {
         
         let calendar = Calendar.current
         if alarmName == AlarmLogic.Once {
-            alarm.hour = calendar.component(.hour, from: Date())
-            alarm.minute = calendar.component(.minute, from: Date()) + 1
+            alarm.hour = calendar.component(.hour, from: Testable.Date())
+            alarm.minute = calendar.component(.minute, from: Testable.Date()) + 1
             isEnabled = true
         }
-        selectedTime = calendar.date(bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: Date()) ?? Date()
+        selectedTime = calendar.date(bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: Testable.Date()) ?? Testable.Date()
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
-        nextDayToFire = try AlarmLogic.getNextDayToFire(Date(), alarm)
+        nextDayToFire = try AlarmLogic.getNextDayToFire(Testable.Date(), alarm)
     }
     
     @MainActor
@@ -127,7 +129,7 @@ struct EditAlarmView: View {
                 editingAlarm.minute = Calendar.current.component(.minute, from: selectedTime)
                 editingAlarm.nextDayToFire = nextDayToFire
                 //TODO should actually not save any changes if there's an exception in AlarmLogic
-                try await AlarmLogic.saveAlarm(Date(), editingAlarm, originalDaysOfWeek, originalDayToFire)
+                try await AlarmLogic.saveAlarm(Testable.Date(), editingAlarm, originalDaysOfWeek, originalDayToFire)
             }
             dismiss()
         } catch {

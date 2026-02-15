@@ -13,7 +13,7 @@ class AlarmModel {
     var minute: Int
     var nextDayToFire: Date //note that this may or may not have the alarm time in it
     var isEnabled: Bool
-    var isOverridden: Bool
+    var isOverridden: Bool //TODO this is probably not correct
     var isGrouped: Bool
     var daysOfWeek: Set<String>
     var selectedSound: String?
@@ -55,8 +55,8 @@ class AlarmModel {
         return String(format: "%02d", hour)+":"+String(format: "%02d", minute)
     }
     
-    private func getEarliestTimeIfEarlier() -> [Int]? {
-        if let earliest = AlarmLogic.getEarliest(Date(), nextDayToFire) {
+    private func getEarliestTimeIfEarlier(_ now: Date) -> [Int]? {
+        if let earliest = AlarmLogic.getEarliest(now, nextDayToFire) {
             if let earliestOffset = Calendar.current.date(byAdding: .minute, value: -30, to: earliest) { //TODO expose the config
                 let earliestMinute = Calendar.current.component(.minute, from: earliestOffset)
                 let earliestHour = Calendar.current.component(.hour, from: earliestOffset)
