@@ -7,16 +7,37 @@ import OSLog
 struct AlarmListView: View {
     @Binding var showModal: Bool
     @Environment(\.modelContext) private var modelContext
-    //TODO sort the weekdays to the top?
-    //TODO resort the holidays that are not enabled?
-    @Query(sort: \AlarmModel.nextDayToFire) private var alarms: [AlarmModel]
+    @Query private var alarms: [AlarmModel]
     @State private var editingAlarm: AlarmModel?
     @State private var showAlert = false
+
+    private var sortedAlarms: [AlarmModel] {
+        alarms.sorted { adjusted($0) < adjusted($1) }
+    }
+
+    private func adjusted(_ a: AlarmModel) -> Double {
+        if (a.name == AlarmLogic.Once) {
+            return 0
+        } else if (a.isWeekDay || a.isShabbos) {
+            return 1
+        } else {
+            do {
+                var d: Date = try a.getAlarmDateAndTime()
+                if (a.nextDayToFire < Testable.Date()) {
+                    d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
+                }
+                return d.timeIntervalSince1970
+            } catch {
+                Logger.shared.info("Couldn't getAlarmDateAndTime")
+                return 0
+            }
+        }
+    }
     
     var body: some View {
         NavigationStack {
             List {
-                ForEach(alarms) { alarm in
+                ForEach(sortedAlarms) { alarm in
                     AlarmRowView(alarm: alarm)
                         .onTapGesture {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()

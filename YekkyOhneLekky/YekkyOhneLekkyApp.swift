@@ -22,7 +22,7 @@ struct YekkyOhneLekkyApp: App {
     init() {
         do {
             container = try ModelContainer(for: AlarmModel.self)
-            let configuredAlarms = try container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled && !$0.isOverridden}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", ")
+            let configuredAlarms = try container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", ")
             Logger.shared.info("Configured alarms: \(configuredAlarms)")
         } catch {
             fatalError("Failed to initialize ModelContainer")

@@ -10,6 +10,7 @@ struct AlarmDetailsView: View {
     @Binding var isEnabled: Bool
     @Binding var isOverridden: Bool
     @Binding var isGrouped: Bool
+    @Binding var maybeDayToFire: Date
     @Binding var nextDayToFire: Date
     @Binding var daysOfWeek: Set<String>
     @State private var initialSelectedTime: Date = Date.distantPast

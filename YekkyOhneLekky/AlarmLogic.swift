@@ -221,9 +221,11 @@ class AlarmLogic {
                 daysOfWeek: removedDays,
                 hour: editingAlarm.hour,
                 minute: editingAlarm.minute,
+                maybeDayToFire: Date.distantFuture,
                 nextDayToFire: Date.distantFuture
             )
-            newAlarm.nextDayToFire = try getNextDayToFire(now, newAlarm)
+            newAlarm.maybeDayToFire = try getNextDayToFire(now, newAlarm)
+            newAlarm.nextDayToFire = newAlarm.maybeDayToFire
             newAlarm.copyConfigFrom(editingAlarm)
             newAlarm.isEnabled = false
             modelContext.insert(newAlarm)
@@ -253,6 +255,7 @@ class AlarmLogic {
             alarmType: AlarmType.explicit,
             hour: editingAlarm.hour,
             minute: editingAlarm.minute,
+            maybeDayToFire: editingAlarm.maybeDayToFire,
             nextDayToFire: editingAlarm.nextDayToFire
         )
         newAlarm.copyConfigFrom(editingAlarm)
@@ -341,7 +344,8 @@ class AlarmLogic {
                 }
             }
             
-            alarm.nextDayToFire = try getNextDayToFire(now, alarm)
+            alarm.maybeDayToFire = try getNextDayToFire(now, alarm)
+            alarm.nextDayToFire = alarm.maybeDayToFire
             
             try overrideAsAppropriate(now, alarm)
             if alarm.isOverridden {
@@ -521,6 +525,7 @@ class AlarmLogic {
             alarmType: alarmType,
             hour: 8,
             minute: 0,
+            maybeDayToFire: nextDayToFire,
             nextDayToFire: nextDayToFire,
             isEnabled: false
         )

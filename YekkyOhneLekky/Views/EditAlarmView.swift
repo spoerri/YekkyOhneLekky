@@ -24,6 +24,7 @@ struct EditAlarmView: View {
     @State private var isEnabled: Bool = true
     @State private var isOverridden: Bool = true
     @State private var isGrouped: Bool = true
+    @State private var maybeDayToFire: Date = Testable.Date()
     @State private var nextDayToFire: Date = Testable.Date()
     @State private var daysOfWeek = Set<String>()
     @State private var showPermissionsDeniedAlert = false
@@ -46,6 +47,7 @@ struct EditAlarmView: View {
                     isEnabled: $isEnabled,
                     isOverridden: $isOverridden,
                     isGrouped: $isGrouped,
+                    maybeDayToFire: $maybeDayToFire,
                     nextDayToFire: $nextDayToFire,
                     daysOfWeek: $daysOfWeek
                 )
@@ -106,7 +108,8 @@ struct EditAlarmView: View {
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
-        nextDayToFire = try AlarmLogic.getNextDayToFire(Testable.Date(), alarm)
+        maybeDayToFire = try AlarmLogic.getNextDayToFire(Testable.Date(), alarm)
+        nextDayToFire = maybeDayToFire
     }
     
     @MainActor
@@ -127,6 +130,7 @@ struct EditAlarmView: View {
                 editingAlarm.repetitionDelay = repetitionDelay
                 editingAlarm.hour = Calendar.current.component(.hour, from: selectedTime)
                 editingAlarm.minute = Calendar.current.component(.minute, from: selectedTime)
+                editingAlarm.maybeDayToFire = maybeDayToFire
                 editingAlarm.nextDayToFire = nextDayToFire
                 //TODO should actually not save any changes if there's an exception in AlarmLogic
                 try await AlarmLogic.saveAlarm(Testable.Date(), editingAlarm, originalDaysOfWeek, originalDayToFire)

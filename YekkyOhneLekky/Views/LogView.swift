@@ -1,9 +1,12 @@
 import Foundation
 import OSLog
 import SwiftUI
+import UIKit
+import SwiftData
 
 struct LogView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     let logs: [OSLogEntryLog]
 
     init() {
@@ -28,8 +31,20 @@ struct LogView: View {
                 }.bold()
             }
         }
-        Button("Dismiss") {
-            dismiss()
+        HStack {
+            Spacer()
+            Button("Delete All Data") {
+                modelContext.container.deleteAllData()
+            }
+            Spacer()
+            Button("Dismiss") {
+                dismiss()
+            }
+            Spacer()
+            Button("Copy") {
+                UIPasteboard.general.string = logs.map { $0.composedMessage }.joined(separator: "\n")
+            }
+            Spacer()
         }
     }
 }

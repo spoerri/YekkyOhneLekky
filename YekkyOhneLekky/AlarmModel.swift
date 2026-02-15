@@ -11,6 +11,7 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
+    var maybeDayToFire: Date //note that this may or may not have the alarm time in it
     var nextDayToFire: Date //note that this may or may not have the alarm time in it
     var isEnabled: Bool
     var isOverridden: Bool //TODO this is probably not correct
@@ -26,11 +27,12 @@ class AlarmModel {
     var isWeekDay: Bool
     var isShabbos: Bool
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: Date, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 1, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
         self.minute = minute
+        self.maybeDayToFire = maybeDayToFire
         self.nextDayToFire = nextDayToFire
         self.isEnabled = isEnabled
         self.isOverridden = isOverridden
