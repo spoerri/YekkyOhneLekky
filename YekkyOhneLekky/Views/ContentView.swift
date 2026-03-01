@@ -32,9 +32,7 @@ YekkyOhneLekky also automatically sets jewish holiday alarms appropriately based
 
 YekkyOhneLekky can even relieve you of turning off your regular weekday alarms before holidays. Put those alarms in Yekky instead of Apple's standard Clock, and they'll only be used on non-holidays. It supports different alarms for US national holidays, as well as rosh chodesh, fasts, and holidays without an issur melacha. It also supports "one off" alarms that override any of the above. You can use this feature to test alarms when you first start using the app.
 
-For now, please remember to manually update your alarms for yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
-
-The app should not have to be running in the background in order for alarms to sound, or for subsequent alarms to be scheduled. The only possible exception is if the app is not running in the background and your phone is entirely off when an alarm is scheduled to run. In this case, to be sure, just start Yekky after you turn your phone on.
+For now, please remember to manually update your alarms for erev pesach falling on shabbos, yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
 
 Yekky should be smart about multiple alarms occurring on the same day; it prefers the sensible one. “One off”s beat yom tov, yom tov beats shabbos, shabbos beats national holidays, national holidays beat rosh chodesh, and rosh chodesh beats weekdays (e.g. Tuesday). (Fasts and chol hamoed have the same precedence as rosh chodesh. Sundays have the same precedence as national holidays.) The simple explanation is that on “work days”, shacharis is often scheduled to enable people to get to work on time.
 

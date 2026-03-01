@@ -119,6 +119,7 @@ class AlarmModel {
 enum AlarmType: Int, Codable, Comparable {
     case explicit = 0
     case yomTov = 10
+    case specialSaturday = 18
     case saturday = 20
     case national = 30
     case minor = 40

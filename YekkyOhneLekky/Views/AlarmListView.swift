@@ -15,6 +15,7 @@ struct AlarmListView: View {
         alarms.sorted { adjusted($0) < adjusted($1) }
     }
 
+    //TODO make rosh chodesh show for next date when disabled
     private func adjusted(_ a: AlarmModel) -> Double {
         if (a.name == AlarmLogic.Once) {
             return 0

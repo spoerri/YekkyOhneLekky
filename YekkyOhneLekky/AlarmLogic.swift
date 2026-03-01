@@ -10,12 +10,13 @@ import OSLog
 
 class AlarmLogic {
     public static nonisolated let Saturday = "Saturday"
+    public static nonisolated let SaturdayErevPesach = "Saturday Erev Pesach"
     public static nonisolated let Sunday = "Sunday"
     public static nonisolated let Once = "Just once" //TODO make a separate alarm type to avoid forgetting to check
     public static nonisolated let RoshChodesh = "Rosh Chodesh"
     public static nonisolated let CholHamoed = "Chol Hamoed"
     public static nonisolated let allDaysOfWeek = Calendar.current.standaloneWeekdaySymbols
-    public static let groupLabel: [AlarmType: String] = [.yomTov: "yomim tovim", .explicit: "one offs", .national: "nationals", .fast: "fasts"]
+    public static let groupLabel: [AlarmType: String] = [.yomTov: "yomim tovim", .explicit: "one offs", .national: "nationals", .fast: "fasts", .specialSaturday: "special shabboses"]
     
     public class func getEarliest(_ now: Date, _ date: Date?) -> Date? {
         
@@ -48,26 +49,72 @@ class AlarmLogic {
     }
     
     private class func getChagim(_ now: Date) -> [HEvent] {
-        let today = Calendar.current.date(byAdding: .month, value: 0, to: now)! //verbose to ease testing
-        let htoday = HDate(date: today, calendar: .current)
+        let htoday = HDate(date: Calendar.current.date(byAdding: .month, value: 0, to: now)!, calendar: .current)
         
-        //TODO allow overriding israel
+        //TODO allow manually overriding this
         let il = Locale.current.region == Locale.Region.israel
         
-        let holidayTypes = HolidayFlags(arrayLiteral: [ .CHAG, .MINOR_FAST, .MAJOR_FAST, .CHOL_HAMOED, .ROSH_CHODESH ])
-        //.MAJOR_FAST instead of just tisha b'av so that we don't have to special yom kipur observed
+        let holidayTypes = HolidayFlags(arrayLiteral: [ .CHAG, .MINOR_FAST, .CHOL_HAMOED, .ROSH_CHODESH, .SPECIAL_SHABBAT ])
             
         let holidayFilter: (HEvent) -> Bool = { ((il && !$0.flags.contains(.CHUL_ONLY)) || (!il && !$0.flags.contains(.IL_ONLY)))
-            && ((!$0.flags.isDisjoint(with: holidayTypes)  && !$0.flags.contains(.EREV))
-                || $0.desc == "Purim" || $0.desc == "Erev Yom Kippur" || $0.desc.contains("Hoshana"))
+            && (!$0.flags.isDisjoint(with: holidayTypes)
+                || $0.desc == "Purim" || $0.desc.contains("Yom Kippur") || $0.desc.contains("Hoshana") || ($0.desc.starts(with:"Chanuka") && !$0.flags.contains(.EREV)))
             }
         
         let thisYears = Hebcal.getAllHolidaysForYear(year: htoday.yy).filter(holidayFilter).filter{ $0.hdate > htoday }
 //        Logger.shared.info("This year's \(thisYears.map{ $0.hdate.greg() })")
-        let hebrewDateNextYear = HDate(yy:htoday.yy+1, mm:htoday.mm, dd:htoday.dd)
-        let nextYears = Hebcal.getAllHolidaysForYear(year: htoday.yy+1).filter(holidayFilter).filter{ $0.hdate < hebrewDateNextYear }
+        let thisYearsHolidayNames = thisYears.map({ $0.desc })
+        let nextYears = Hebcal.getAllHolidaysForYear(year: htoday.yy+1).filter(holidayFilter).filter{ !thisYearsHolidayNames.contains($0.desc) }
 //        Logger.shared.info("Next year's \(nextYears.map{ $0.hdate.greg() })")
-        return thisYears + nextYears
+        var all = thisYears + nextYears
+        
+        all.removeAll(where: {
+            $0.flags.contains(.SPECIAL_SHABBAT) && !["Shabbat HaChodesh", "Shabbat Shekalim", "Shabbat HaGadol"].contains($0.desc)
+        })
+        
+        addVayakehlPekudei(&all, htoday.yy)
+        addVayakehlPekudei(&all, htoday.yy+1)
+        addForShabbosErevPesach(&all, htoday.yy)
+        addForShabbosErevPesach(&all, htoday.yy+1)
+        addForShabbosErevSheviiShelPesach(&all, htoday.yy)
+        addForShabbosErevSheviiShelPesach(&all, htoday.yy+1)
+        addForShabbosChanukah(&all, htoday.yy)
+        addForShabbosChanukah(&all, htoday.yy+1)
+        
+        return all
+    }
+    
+    private static func addVayakehlPekudei(_ all: inout [HEvent], _ year: Int) {
+        if let vayakehlPekudei = Sedra(year: year, il: false).find(-26) { //dumb api
+            all.append(HEvent(hdate: vayakehlPekudei, desc: "Vayakhel Pekudei", flags: .SPECIAL_SHABBAT))
+        }
+    }
+    
+    private static func addForShabbosErevPesach(_ all: inout [HEvent], _ year: Int) {
+        let shabbosErevPesach = all.filter({ $0.desc == "Erev Pesach" && $0.hdate.dow() == .SAT})
+        for s in shabbosErevPesach {
+            all.removeAll(where: { $0.hdate == s.hdate }) //to replace it with the following:
+            //TODO this should appear the first time it happens, but not disappear when not relevant. is there a significantly better way?
+            all.append(HEvent(hdate: s.hdate, desc: SaturdayErevPesach, flags: .SPECIAL_SHABBAT))
+            all.append(HEvent(hdate: HDate(absdate: s.hdate.abs() - 7), desc: "Shabbat HaGadol", flags: .SPECIAL_SHABBAT))
+        }
+    }
+    
+    private static func addForShabbosErevSheviiShelPesach(_ all: inout [HEvent], _ year: Int) {
+        let shabbosErevSheviiShelPesach = all.filter({ $0.desc == "Pesach VI (CH''M)" && $0.hdate.dow() == .SAT})
+        for s in shabbosErevSheviiShelPesach {
+            all.removeAll(where: { $0.hdate == s.hdate }) //to replace it with the following:
+            all.append(HEvent(hdate: s.hdate, desc: "Saturday Erev Shevii Shel Pesach", flags: .SPECIAL_SHABBAT))
+        }
+    }
+    
+    private static func addForShabbosChanukah(_ all: inout [HEvent], _ year: Int) {
+        var n = 1
+        for s in all.filter({ $0.desc.starts(with:"Chanuka") && $0.hdate.dow() == .SAT}) {
+            all.append(HEvent(hdate: s.hdate, desc: "Shabbat Chanukah \(n)", flags: .SPECIAL_SHABBAT))
+            n+=1
+        }
+        all.removeAll(where: { $0.desc.starts(with:"Chanuka") })
     }
     
     private class func getNextDayOfWeek(_ now: Date, _ daysOfWeek: Set<String>, _ hour: Int, _ minute: Int) throws -> Date {
@@ -293,7 +340,7 @@ class AlarmLogic {
                     try other.unschedule()
                     other.isOverridden = true
                 } else if other.isEnabled {
-                    if !alarm.isWeekDay { //TOOD is this fine?
+                    if !alarm.isWeekDay {
                         alarm.isOverridden = true
                     }
                 }
@@ -446,6 +493,7 @@ class AlarmLogic {
     }
     
     //TODO refactor - maybe the view should handle inserting?
+    //TODO maybe hard code the list
     public static func initializeAlarms(_ now: Date, modelContext: ModelContext, alarms: [AlarmModel]) async throws {
         printScheduledAlarms()
         Logger.shared.info("stopping them all :)")
@@ -458,11 +506,15 @@ class AlarmLogic {
         try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: CholHamoed, nextDayToFire: chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!.hdate.greg(), alarmType: .cholHamoed)
         try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: RoshChodesh, nextDayToFire: chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!.hdate.greg(), alarmType: .roshChodesh)
 
-        for chag in chagim.filter({ !$0.flags.contains(.CHOL_HAMOED) && !$0.flags.contains(.ROSH_CHODESH) }) {
+        for chag in chagim.filter({ $0.flags.isDisjoint(with: [.CHOL_HAMOED, .ROSH_CHODESH, .SPECIAL_SHABBAT]) }) {
             try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: chag.desc, nextDayToFire: chag.hdate.greg(), alarmType:
                                     chag.flags.contains(.CHAG) ? .yomTov :
                                     chag.flags.contains(.MINOR_FAST) || chag.desc == "Tish'a B'Av" ? .fast :
                                     .minor)
+        }
+        
+        for chag in chagim.filter({ $0.flags.contains(.SPECIAL_SHABBAT)}) {
+            try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: chag.desc, nextDayToFire: chag.hdate.greg(), alarmType: .specialSaturday)
         }
         
         for national in UsHolidays.allCases {
@@ -533,10 +585,19 @@ class AlarmLogic {
             alarm.duration = nil
             alarm.repetitions = 0
         }
-        //could do individual yomim tovim...
-        if alarmType == .national {
+        //TODO think about groups and different times?
+        if alarmName == SaturdayErevPesach {
+            alarm.hour = 6
+            alarm.minute = 0
+        } else if alarmType == .specialSaturday || ["Shmini Atzeret", "Pesach VII", "Pesach VIII", "Shavuot II"].contains(alarm.name) {
+            alarm.hour = 7
+            alarm.minute = 30
+        } else if alarmType == .national || alarm.name == "Simchat Torah" {
             alarm.hour = 7
             alarm.minute = 0
+        } else if alarm.name == "Yom Kippur" {
+            alarm.hour = 6
+            alarm.minute = 45
         } else if alarmType == .weekDay {
             alarm.daysOfWeek = Set(allDaysOfWeek).subtracting([Saturday])
             alarm.name = AlarmModel.nameFromDaysOfWeek(alarm.daysOfWeek)
@@ -548,12 +609,12 @@ class AlarmLogic {
         } else if alarmType == .cholHamoed {
             alarm.hour = 6
             alarm.minute = 30
-        } else if alarmType == .minor {
+        } else if alarmType == .minor || alarm.name.starts(with: "Rosh Hashana") {
             alarm.hour = 6
             alarm.minute = 0
         }
         if groupLabel.keys.contains(alarmType) && alarmName != Once {
-            alarm.isGrouped = true
+            alarm.isGrouped = alarm.name != SaturdayErevPesach
         }
         modelContext.insert(alarm)
     }
