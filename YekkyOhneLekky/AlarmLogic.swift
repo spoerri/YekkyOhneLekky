@@ -340,9 +340,7 @@ class AlarmLogic {
                     try other.unschedule()
                     other.isOverridden = true
                 } else if other.isEnabled {
-                    if !alarm.isWeekDay {
-                        alarm.isOverridden = true
-                    }
+                    alarm.isOverridden = true
                 }
             }
         }
@@ -399,17 +397,10 @@ class AlarmLogic {
                 return
             }
             
-            Logger.shared.notice("not overridden") //TODO debug
-            
-            let stopButton = AlarmButton(
-                text: "",
-                textColor: .black,
-                systemImageName: "checkmark.seal.fill"
-            )
+            Logger.shared.notice("not overridden")
             
             let alertPresentation = AlarmPresentation.Alert(
                 title: getSalutation(alarm: alarm),
-                stopButton: stopButton
             )
             
             let presentation = AlarmPresentation(
@@ -581,7 +572,7 @@ class AlarmLogic {
             nextDayToFire: nextDayToFire,
             isEnabled: false
         )
-        if alarmType != .yomTov && alarmType != .saturday {
+        if alarmType != .yomTov && alarmType != .saturday && alarmType != .specialSaturday {
             alarm.duration = nil
             alarm.repetitions = 0
         }

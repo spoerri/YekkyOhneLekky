@@ -68,7 +68,11 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     
     public func perform() async throws -> some IntentResult {
         do {
-            try await AlarmActor.shared.scheduleNextAlarms()
+            if AlarmActor.shared == nil {
+                Logger.shared.info("AlarmActor.shared is nil!")
+            } else {
+                try await AlarmActor.shared.scheduleNextAlarms()
+            }
         } catch {
             Logger.shared.info("Error scheduling next alarms")
         }

@@ -6,8 +6,6 @@ import Foundation
 import Hebcal
 import OSLog
 
-//TODO allow overriding the date for manual testing, here and AlarmListView and AlarmActor
-
 struct EditAlarmView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss

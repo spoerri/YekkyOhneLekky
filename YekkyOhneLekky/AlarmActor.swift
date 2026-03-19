@@ -5,11 +5,11 @@ import OSLog
 
 @ModelActor
 actor AlarmActor {
-    private(set) static var shared: AlarmActor!
-    
-    static func createSharedInstance(modelContext: ModelContext) {
-        shared = AlarmActor(modelContainer: modelContext.container)
-    }
+    static let shared: AlarmActor = {
+        Logger.shared.info("initializing AlarmActor")
+        let container = try! ModelContainer(for: AlarmModel.self)
+        return AlarmActor(modelContainer: container)
+    }()
     
     func scheduleNextAlarms() async throws {
         Logger.shared.info("Rescheduling")

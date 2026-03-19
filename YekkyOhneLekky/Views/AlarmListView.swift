@@ -17,21 +17,22 @@ struct AlarmListView: View {
 
     //TODO make rosh chodesh show for next date when disabled
     private func adjusted(_ a: AlarmModel) -> Double {
-        if (a.name == AlarmLogic.Once) {
-            return 0
-        } else if (a.isWeekDay || a.isShabbos) {
-            return 1
-        } else {
-            do {
-                var d: Date = try a.getAlarmDateAndTime()
-                if (a.nextDayToFire < Testable.Date()) {
-                    d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
-                }
-                return d.timeIntervalSince1970
-            } catch {
-                Logger.shared.info("Couldn't getAlarmDateAndTime")
+        do {
+            var d: Date = try a.getAlarmDateAndTime()
+            if a.name == AlarmLogic.Once {
                 return 0
             }
+            if !a.isEnabled && (a.isWeekDay || a.isShabbos) {
+                d = Calendar.current.date(byAdding: .day, value: 7, to: d)!
+            } else {
+                if d < Testable.Date() {
+                    d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
+                }
+            }
+            return d.timeIntervalSince1970
+        } catch {
+            Logger.shared.info("Couldn't getAlarmDateAndTime")
+            return 0
         }
     }
     
@@ -74,7 +75,6 @@ struct AlarmListView: View {
                 EditAlarmView(editingAlarm: alarm)
             }
             .task {
-                AlarmActor.createSharedInstance(modelContext: modelContext) //TODO is this the best way?
                 do {
                     try await AlarmLogic.initializeAlarms(Testable.Date(), modelContext: modelContext, alarms: alarms)
                 } catch {

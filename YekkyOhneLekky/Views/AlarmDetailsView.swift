@@ -30,8 +30,9 @@ struct AlarmDetailsView: View {
                 } else {
                     HStack {
                         Text("Next date:")
-                        Text(nextDayToFire, formatter: dateFormatter)
+                        Text(maybeDayToFire, formatter: dateFormatter)
                             .strikethrough(isOverridden).frame(maxWidth: .infinity, alignment: .trailing)
+                        //TODO show the nextDayToFire (not strikethrough) if maybeDayToFire is overridden
                         //TODO be clever about two day rosh chodesh?
                     }
                 }

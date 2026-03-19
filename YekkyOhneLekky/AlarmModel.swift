@@ -77,8 +77,8 @@ class AlarmModel {
         return try getAlarmDateAndTime(nextDayToFire)
     }
     
-    func getAlarmDateAndTime(_ arbitraryDay: Date, _ h: Int? = nil, _ m: Int? = nil) throws -> Date {
-        guard let fullDate = Calendar.current.date(bySettingHour: h ?? hour, minute: m ?? minute, second:0, of: arbitraryDay, matchingPolicy: .nextTime) else { throw AlarmError.ugh }
+    func getAlarmDateAndTime(_ date: Date, _ h: Int? = nil, _ m: Int? = nil) throws -> Date {
+        guard let fullDate = Calendar.current.date(bySettingHour: h ?? hour, minute: m ?? minute, second:0, of: nextDayToFire) else { throw AlarmError.ugh }
         return fullDate
     }
     
