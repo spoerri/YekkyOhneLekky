@@ -135,9 +135,6 @@ class AlarmLogic {
     
     //TODO support saving an alarm all night for the coming day, with code like currentMinute check above
     //TODO check that getChagim does indeed start with tomorrow
-    private static func tomorrow(_ now: Date) -> Date {
-        return nextDay(now)
-    }
     
     private static func nextDay(_ d: Date) -> Date {
         return d+TimeInterval(60*60*24)
@@ -180,7 +177,7 @@ class AlarmLogic {
         guard let legalHoliday = UsHolidays.init(rawValue: name) else {
             throw AlarmError.ugh
         }
-        let year = Calendar.current.component(.year, from: tomorrow(now))
+        let year = Calendar.current.component(.year, from: nextDay(now))
         let thisYears = try legalHoliday.date(in: year)
         if thisYears > now {
             return thisYears
@@ -317,6 +314,7 @@ class AlarmLogic {
         let stop = start + TimeInterval(60*60*24)
         if let overriddenAlarm = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.nextDayToFire && other.nextDayToFire < stop && other.isOverridden })).sorted(using: SortDescriptor(\.alarmType)).first {
             overriddenAlarm.isOverridden = false
+            overriddenAlarm.nextDayToFire = overriddenAlarm.maybeDayToFire 
             await schedule(now, overriddenAlarm)
         }
     }
@@ -339,8 +337,10 @@ class AlarmLogic {
                 if other.alarmType > alarm.alarmType {
                     try other.unschedule()
                     other.isOverridden = true
+                    other.nextDayToFire = try getNextDayToFire(nextDay(now), other)
                 } else if other.isEnabled {
                     alarm.isOverridden = true
+                    alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
                 }
             }
         }
@@ -350,12 +350,14 @@ class AlarmLogic {
             try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
                 other.isEnabled && other.isShabbos })).forEach { _ in
                 alarm.isOverridden = true
+                alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
             }
         } else if dayOfWeek == Sunday && alarm.alarmType > .national && alarm.alarmType != .weekDay {
             try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
                 other.isEnabled && other.isWeekDay })).forEach { other in
                     if other.daysOfWeek.contains(dayOfWeek) {
                         alarm.isOverridden = true
+                        alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
                     }
                 }
         }
