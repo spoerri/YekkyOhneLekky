@@ -15,7 +15,7 @@ class AlarmModel {
     var nextDayToFire: Date //note that this may or may not have the alarm time in it
     var isEnabled: Bool
     var isOverridden: Bool //TODO this is probably not correct
-    var isGrouped: Bool
+    	var isGrouped: Bool
     var daysOfWeek: Set<String>
     var selectedSound: String?
     var createdAt: Date
@@ -77,8 +77,8 @@ class AlarmModel {
         return try getAlarmDateAndTime(nextDayToFire)
     }
     
-    func getAlarmDateAndTime(_ date: Date, _ h: Int? = nil, _ m: Int? = nil) throws -> Date {
-        guard let fullDate = Calendar.current.date(bySettingHour: h ?? hour, minute: m ?? minute, second:0, of: nextDayToFire) else { throw AlarmError.ugh }
+    func getAlarmDateAndTime(_ date: Date) throws -> Date {
+        guard let fullDate = Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: nextDayToFire) else { throw AlarmError.ugh }
         return fullDate
     }
     
@@ -128,7 +128,7 @@ enum AlarmType: Int, Codable, Comparable {
     case roshChodesh = 70
     case weekDay = 80
 
-     static func ==(lhs: AlarmType, rhs: AlarmType) -> Bool {
+    static func ==(lhs: AlarmType, rhs: AlarmType) -> Bool {
         return lhs.rawValue == rhs.rawValue
     }
 

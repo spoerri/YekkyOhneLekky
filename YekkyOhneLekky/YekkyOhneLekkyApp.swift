@@ -6,10 +6,8 @@ import AlarmKit
 import OSLog
 
 extension Logger {
-    /// Using your bundle identifier is a great way to ensure a unique identifier.
     private static var subsystem = Bundle.main.bundleIdentifier!
     
-    /// Logs the view cycles like a view that appeared.
     static nonisolated let shared = Logger(subsystem: subsystem, category: "foo")
 }
 
@@ -32,8 +30,6 @@ struct YekkyOhneLekkyApp: App {
             Logger.shared.error("Could not fetch all alarms")
         }
     }
-    
-    
     
     nonisolated func scheduleAppRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: bgTaskIdentifier)
@@ -74,11 +70,7 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     
     public func perform() async throws -> some IntentResult {
         do {
-            if AlarmActor.shared == nil {
-                Logger.shared.info("AlarmActor.shared is nil!")
-            } else {
-                try await AlarmActor.shared.scheduleNextAlarms()
-            }
+            try await AlarmActor.shared.scheduleNextAlarms()
         } catch {
             Logger.shared.info("Error scheduling next alarms")
         }
