@@ -2,6 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>OSLogPreferences</key>
+	<dict>
+		<key>org.spoer.YekkyOhneLekky</key>
+		<dict>
+			<key>MyCategory</key>
+			<dict>
+				<key>Enable</key>
+				<string>Info</string>
+				<key>Persist</key>
+				<string>Info</string>
+				<key>Enable-Private-Data</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>

@@ -11,24 +11,17 @@ struct LogView: View {
 
     init() {
         let logStore = try! OSLogStore(scope: .currentProcessIdentifier)
-        self.logs = try! logStore.getEntries().compactMap { entry in
-            guard let logEntry = entry as? OSLogEntryLog,
-                  logEntry.subsystem.contains("YekkyOhneLekky") else {
-                return nil
-            }
-
-            return logEntry
-        }
+        self.logs = try! logStore.getEntries(
+            at: logStore.position(timeIntervalSinceEnd: 7*24*60*60),
+            matching: NSPredicate(format: "subsystem = \"\(Logger.subsystem)\"")
+        ).compactMap({ $0 as? OSLogEntryLog })
     }
 
     var body: some View {
         List(logs, id: \.self) { log in
             VStack(alignment: .leading) {
+                Text(log.date, format: .dateTime).bold()
                 Text(log.composedMessage)
-                HStack {
-                    Text(log.subsystem)
-                    Text(log.date, format: .dateTime)
-                }.bold()
             }
         }
         HStack {

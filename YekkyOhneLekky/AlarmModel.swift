@@ -14,8 +14,8 @@ class AlarmModel {
     var maybeDayToFire: Date //note that this may or may not have the alarm time in it
     var nextDayToFire: Date //note that this may or may not have the alarm time in it
     var isEnabled: Bool
-    var isOverridden: Bool //TODO this is probably not correct
-    	var isGrouped: Bool
+    var isOverridden: Bool //TODO remove, replaced by maybeDayToFire != nextDayToFire
+    var isGrouped: Bool
     var daysOfWeek: Set<String>
     var selectedSound: String?
     var createdAt: Date
@@ -82,15 +82,25 @@ class AlarmModel {
         return fullDate
     }
     
+    func isSameDayAs(_ date: Date) -> Bool {
+        return Calendar.current.isDate(maybeDayToFire, inSameDayAs: date)
+    }
+    
     func unschedule() throws {
-        for id in ids {
-            if try AlarmManager.shared.alarms.contains(where: { $0.id == id }) {
-                Logger.shared.notice("Unscheduling \(id, privacy: .public)")
+        let count = try AlarmManager.shared.alarms.count
+        for alarm in try AlarmManager.shared.alarms {
+            if ids.contains(alarm.id) {
                 do {
-                    try AlarmManager.shared.stop(id: id)
+                    if case let .fixed(date) = alarm.schedule {
+                        Logger.shared.info("unsched: \(date.formatted(), privacy: .public)")
+                    } else {
+                        Logger.shared.info("unsched not fixed?!: \(alarm.id, privacy: .public)") //something's wrong
+                    }
+                    try AlarmManager.shared.stop(id: alarm.id)
                 } catch {
-                    Logger.shared.info("could not cancel \(id)")
+                    Logger.shared.error("could not cancel \(alarm.id)")
                 }
+                
             }
         }
         ids.removeAll()

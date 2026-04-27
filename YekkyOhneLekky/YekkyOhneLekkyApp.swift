@@ -6,9 +6,9 @@ import AlarmKit
 import OSLog
 
 extension Logger {
-    private static var subsystem = Bundle.main.bundleIdentifier!
+    static var subsystem = Bundle.main.bundleIdentifier!
     
-    static nonisolated let shared = Logger(subsystem: subsystem, category: "foo")
+    static nonisolated let shared = Logger(subsystem: subsystem, category: "MyCategory")
 }
 
 @main
@@ -25,7 +25,7 @@ struct YekkyOhneLekkyApp: App {
         }
         do {
             let configuredAlarms = try container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", ")
-            Logger.shared.info("Configured alarms: \(configuredAlarms)")
+            //Logger.shared.info("Configured alarms: \(configuredAlarms)")
         } catch {
             Logger.shared.error("Could not fetch all alarms")
         }
@@ -37,7 +37,7 @@ struct YekkyOhneLekkyApp: App {
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            Logger.shared.notice("Could not schedule app refresh: \(error)")
+            Logger.shared.error("Could not schedule app refresh: \(error, privacy: .public)")
         }
     }
     
@@ -55,6 +55,7 @@ struct YekkyOhneLekkyApp: App {
         .backgroundTask(.appRefresh(bgTaskIdentifier)) { @Sendable context in
             do {
                 scheduleAppRefresh()
+                Logger.shared.info("backgroundTask")
                 try await AlarmActor.shared.scheduleNextAlarms()
             } catch {
                 
@@ -70,9 +71,10 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     
     public func perform() async throws -> some IntentResult {
         do {
+            Logger.shared.info("intent")
             try await AlarmActor.shared.scheduleNextAlarms()
         } catch {
-            Logger.shared.info("Error scheduling next alarms")
+            Logger.shared.error("Error scheduling next alarms")
         }
         return .result()
     }

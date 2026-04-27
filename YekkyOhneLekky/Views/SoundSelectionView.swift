@@ -57,14 +57,14 @@ struct SoundSelectionView: View {
     }
     
     private func playSound(_ filename: String) {
-        Logger.shared.info("🎵 Attempting to play sound: \(filename)")
+        //Logger.shared.info("🎵 Attempting to play sound: \(filename)")
         
         guard let soundURL = Bundle.main.url(forResource: filename, withExtension: "mp3") else {
-            Logger.shared.info("❌ Could not find sound file: \(filename).mp3")
+            Logger.shared.error("❌ Could not find sound file: \(filename).mp3")
             return
         }
         
-        Logger.shared.info("✅ Found sound file at: \(soundURL)")
+        //Logger.shared.info("✅ Found sound file at: \(soundURL)")
         
         do {
             // Set up audio session for playback
@@ -82,12 +82,12 @@ struct SoundSelectionView: View {
             let success = audioPlayer?.play() ?? false
             if success {
                 currentlyPlayingSound = filename
-                Logger.shared.info("✅ Started playing: \(filename)")
+                //Logger.shared.info("✅ Started playing: \(filename)")
             } else {
-                Logger.shared.info("❌ Failed to start playback")
+                Logger.shared.error("❌ Failed to start playback")
             }
         } catch {
-            Logger.shared.info("❌ Error playing sound: \(error)")
+            Logger.shared.error("❌ Error playing sound: \(error, privacy: .public)")
         }
     }
     
@@ -140,12 +140,12 @@ private class AudioPlayerDelegate: NSObject, AVAudioPlayerDelegate {
     }
     
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        Logger.shared.info("🎵 Audio playback finished successfully: \(flag)")
+        //Logger.shared.info("🎵 Audio playback finished successfully: \(flag)")
         onFinish()
     }
     
     func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
-        Logger.shared.info("❌ Audio decode error: \(error?.localizedDescription ?? "Unknown")")
+        //Logger.shared.info("❌ Audio decode error: \(error?.localizedDescription ?? "Unknown")")
         onFinish()
     }
 }

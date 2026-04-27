@@ -15,23 +15,18 @@ struct AlarmListView: View {
         alarms.sorted { adjusted($0) < adjusted($1) }
     }
 
-    //TODO make rosh chodesh show for next date when disabled
     private func adjusted(_ a: AlarmModel) -> Double {
         do {
             var d: Date = try a.getAlarmDateAndTime()
             if a.name == AlarmLogic.Once {
                 return 0
             }
-            if !a.isEnabled && (a.isWeekDay || a.isShabbos) {
-                d = Calendar.current.date(byAdding: .day, value: 7, to: d)!
-            } else {
-                if d < Testable.Date() {
-                    d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
-                }
+            if d < Testable.Date() { //for things that don't come every year, e.g. sometimes vayakehl&Pekudei are not a double parsha
+                d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
             }
             return d.timeIntervalSince1970
         } catch {
-            Logger.shared.info("Couldn't getAlarmDateAndTime")
+            Logger.shared.error("Couldn't getAlarmDateAndTime")
             return 0
         }
     }
@@ -55,7 +50,7 @@ struct AlarmListView: View {
                             do {
                                 try alarm.unschedule()
                             } catch {
-                                Logger.shared.info("Couldn't disable all")
+                                Logger.shared.error("Couldn't disable all")
                                 showAlert = true
                             }
                         }
@@ -78,7 +73,7 @@ struct AlarmListView: View {
                 do {
                     try await AlarmLogic.initializeAlarms(Testable.Date(), modelContext: modelContext, alarms: alarms)
                 } catch {
-                    Logger.shared.info("Could not initialize")
+                    Logger.shared.error("Could not initialize")
                     showAlert = true
                 }
             }

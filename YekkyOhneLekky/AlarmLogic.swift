@@ -36,7 +36,7 @@ class AlarmLogic {
             return nil
         }
         
-//        Logger.shared.info("latitude",currentLocation.coordinate.latitude,"longitude",currentLocation.coordinate.longitude)
+        //Logger.shared.info("latitude",currentLocation.coordinate.latitude,"longitude",currentLocation.coordinate.longitude)
 
         //kaj starts ~7 minutes before their zman tefilin, which is around an hour before sunrise
         
@@ -62,10 +62,10 @@ class AlarmLogic {
             }
         
         let thisYears = Hebcal.getAllHolidaysForYear(year: htoday.yy).filter(holidayFilter).filter{ $0.hdate > htoday }
-//        Logger.shared.info("This year's \(thisYears.map{ $0.hdate.greg() })")
+        //Logger.shared.info("This year's \(thisYears.map{ $0.hdate.greg() })")
         let thisYearsHolidayNames = thisYears.map({ $0.desc })
         let nextYears = Hebcal.getAllHolidaysForYear(year: htoday.yy+1).filter(holidayFilter).filter{ !thisYearsHolidayNames.contains($0.desc) }
-//        Logger.shared.info("Next year's \(nextYears.map{ $0.hdate.greg() })")
+        //Logger.shared.info("Next year's \(nextYears.map{ $0.hdate.greg() })")
         var all = thisYears + nextYears
         
         all.removeAll(where: {
@@ -85,7 +85,7 @@ class AlarmLogic {
     }
     
     private static func addVayakehlPekudei(_ all: inout [HEvent], _ year: Int) {
-        if let vayakehlPekudei = Sedra(year: year, il: false).find(-26) { //dumb api
+        if let vayakehlPekudei = Sedra(year: year, il: false).find(-21) { //dumb api
             all.append(HEvent(hdate: vayakehlPekudei, desc: "Vayakhel Pekudei", flags: .SPECIAL_SHABBAT))
         }
     }
@@ -223,8 +223,6 @@ class AlarmLogic {
         guard editingAlarm.modelContext != nil else { throw AlarmError.ugh }
         let modelContext = editingAlarm.modelContext!
         
-        printScheduledAlarms()
-        
         if editingAlarm.alarmType == .weekDay {
             try await saveWeekDayAlarms(now, editingAlarm, originalDaysOfWeek, modelContext)
         } else if editingAlarm.name == AlarmLogic.Once && editingAlarm.isEnabled {
@@ -241,7 +239,7 @@ class AlarmLogic {
         try modelContext.save()
     }
     
-    private class func disablePastOneOffs(_ now: Date, _ modelContext: ModelContext?) throws {
+    public class func disablePastOneOffs(_ now: Date, _ modelContext: ModelContext?) throws {
         let endOfToday = Calendar.current.startOfDay(for: now) + TimeInterval(60*60*24)
         if let todays = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.isEnabled && other.nextDayToFire <= endOfToday})) {
             for alarm in todays {
@@ -278,7 +276,7 @@ class AlarmLogic {
             if !editingAlarm.daysOfWeek.isDisjoint(with: alarm.daysOfWeek) && alarm != editingAlarm {
                 alarm.daysOfWeek.subtract(editingAlarm.daysOfWeek)
                 if alarm.daysOfWeek.isEmpty {
-                    Logger.shared.info("dayOfWeek alarm left empty, deleting")
+//                    Logger.shared.info("dayOfWeek alarm left empty, deleting")
                     try alarm.unschedule()
                     modelContext.delete(alarm)
                 } else {
@@ -369,17 +367,24 @@ class AlarmLogic {
         if try isFullyScheduled(alarm) {
             return;
         }
-        Logger.shared.notice("not fully scheduled")
-        try disablePastOneOffs(now, alarm.modelContext) //to avoid previous alarm today from overriding
+        //Logger.shared.notice("not fully scheduled")
+        
+        if (alarm.maybeDayToFire < now || alarm.isSameDayAs(now)) {
+            alarm.maybeDayToFire = try getNextDayToFire(now, alarm)
+            alarm.nextDayToFire = alarm.maybeDayToFire
+            try alarm.modelContext?.save()
+        }
+        
         await schedule(now, alarm)
     }
     
     //TODO pull the AlarmKit stuff out to make unit testing easier
     private class func schedule(_ now: Date, _ alarm: AlarmModel) async {
-        Logger.shared.notice("Perhaps scheduling \(alarm.name, privacy: .public): \(alarm.nextDayToFire, privacy: .public)")
+        //Logger.shared.notice("Perhaps scheduling \(alarm.name, privacy: .public): \(alarm.nextDayToFire, privacy: .public)")
         do {
             try alarm.unschedule()
             
+            //TODO disabling from save should check the overrides
             if !alarm.isEnabled {
                 return;
             }
@@ -391,15 +396,12 @@ class AlarmLogic {
                 }
             }
             
-            alarm.maybeDayToFire = try getNextDayToFire(now, alarm)
-            alarm.nextDayToFire = alarm.maybeDayToFire
-            
             try overrideAsAppropriate(now, alarm)
             if alarm.isOverridden {
                 return
             }
             
-            Logger.shared.notice("not overridden")
+            //Logger.shared.notice("not overridden")
             
             let alertPresentation = AlarmPresentation.Alert(
                 title: getSalutation(alarm: alarm),
@@ -427,7 +429,7 @@ class AlarmLogic {
             } else {
                 soundConfig = .default
             }
-//            Logger.shared.info("Using sound: \(soundConfig)")
+            //Logger.shared.info("Using sound: \(soundConfig)")
             
             var date = try alarm.getAlarmDateAndTime(now)
             
@@ -435,8 +437,12 @@ class AlarmLogic {
                 return
             }
             
-            Logger.shared.notice("not in the past") //TODO debug
+            //Logger.shared.notice("not in the past") //TODO debug
             
+            let repetitions = alarm.repetitions > 0 ? "x"+String(describing:alarm.repetitions+1) : ""
+            let name = alarm.name.count > 13 ? alarm.name.prefix(13) + "…" : alarm.name
+            Logger.shared.info("sched \(name, privacy: .public): \(date.formatted(), privacy: .public) \(repetitions)")
+
             for i in 0...alarm.repetitions {
                 try await scheduleAlarm(now, id: alarm.ids[i*2], date: date, soundConfig: soundConfig, attributes: attributes)
                 if let duration = alarm.duration {
@@ -446,12 +452,14 @@ class AlarmLogic {
                 }
             }
         } catch {
-            Logger.shared.info("\(now) Error scheduling alarm: \(error)")
+            Logger.shared.error("\(now) Error scheduling alarm: \(error, privacy: .public)")
         }
     }
     
-    class func isFullyScheduled(_ alarm: AlarmModel) throws -> Bool {
-        return try !alarm.ids.isEmpty && Set(alarm.ids).isSubset(of: AlarmManager.shared.alarms.map { $0.id })
+    public class func isFullyScheduled(_ alarm: AlarmModel) throws -> Bool {
+        let unscheduled = try Set(alarm.ids).subtracting(AlarmManager.shared.alarms.map { $0.id }).count
+        if unscheduled != 0 && unscheduled != alarm.ids.count { Logger.shared.info("partially unscheduled! i.e. \(unscheduled)") }
+        return unscheduled == 0
     }
     
     struct EmptyMetadata : AlarmMetadata {
@@ -467,7 +475,7 @@ class AlarmLogic {
             stopIntent: ScheduleNextAlarmsIntent(alarmID: id.uuidString),
             sound: soundConfig
         )
-        Logger.shared.notice("Scheduling \(id, privacy: .public) for \(date, privacy: .public)")
+        //Logger.shared.notice("Scheduling \(id, privacy: .public) for \(date, privacy: .public)")
         _ = try await AlarmManager.shared.schedule(id: id, configuration: alarmConfiguration)
     }
     
@@ -488,13 +496,14 @@ class AlarmLogic {
     //TODO refactor - maybe the view should handle inserting?
     //TODO maybe hard code the list
     public static func initializeAlarms(_ now: Date, modelContext: ModelContext, alarms: [AlarmModel]) async throws {
+        Logger.shared.info("initializeAlarms")
         printScheduledAlarms()
-        Logger.shared.info("stopping them all :)")
-        try AlarmManager.shared.alarms.forEach{ try AlarmManager.shared.stop(id: $0.id )}
+        //Logger.shared.info("stopping them all :)")
+        try AlarmManager.shared.alarms.forEach{try AlarmManager.shared.stop(id: $0.id )}
         
         let chagim = getChagim(now)
         let chagimDescription = chagim.map{$0.desc}
-        Logger.shared.info("Chagim \(chagimDescription)")
+        //Logger.shared.info("Chagim \(chagimDescription)")
         
         try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: CholHamoed, nextDayToFire: chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!.hdate.greg(), alarmType: .cholHamoed)
         try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: RoshChodesh, nextDayToFire: chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!.hdate.greg(), alarmType: .roshChodesh)
@@ -528,16 +537,25 @@ class AlarmLogic {
         do {
             try modelContext.save()
         } catch {
-            Logger.shared.info("Failed to initialize: \(error)")
+            Logger.shared.error("Failed to initialize: \(error, privacy: .public)")
         }
     }
     
     public static nonisolated func printScheduledAlarms() {
         do {
-            let descriptions = try AlarmManager.shared.alarms.map { $0.schedule.debugDescription }.joined(separator: "\n")
-            Logger.shared.notice("All scheduled alarms:\n\(descriptions, privacy: .public)")
+            var timesForDate = [String: [String]]()
+            for alarm in try AlarmManager.shared.alarms {
+                if case let .fixed(date) = alarm.schedule {
+                    timesForDate[date.formatted(.dateTime.year(.twoDigits).month(.twoDigits).day(.twoDigits)), default: []].append(date.formatted(date: .omitted, time: .shortened))
+                }
+            }
+            var snapshot = ""
+            for date in timesForDate.keys.sorted() {
+                snapshot += "\(date): \(timesForDate[date]?.sorted().joined(separator: ",") ?? "?")\n"
+            }
+            Logger.shared.notice("Snapshot:\n\(snapshot, privacy: .public)")
         } catch {
-            Logger.shared.info("Couldn't print scheduled alarms: \(error)")
+            Logger.shared.error("Couldn't print scheduled alarms: \(error, privacy: .public)")
         }
     }
     
@@ -564,7 +582,7 @@ class AlarmLogic {
                 return
             }
         }
-        Logger.shared.info("initializing \(alarmName)")
+        //Logger.shared.info("initializing \(alarmName)")
         let alarm = AlarmModel(
             name: alarmName,
             alarmType: alarmType,
@@ -582,7 +600,7 @@ class AlarmLogic {
         if alarmName == SaturdayErevPesach {
             alarm.hour = 6
             alarm.minute = 0
-        } else if alarmType == .specialSaturday || ["Shmini Atzeret", "Pesach VII", "Pesach VIII", "Shavuot II"].contains(alarm.name) {
+        } else if alarmType == .specialSaturday || ["Shmini Atzeret", "Pesach VIII", "Shavuot II"].contains(alarm.name) {
             alarm.hour = 7
             alarm.minute = 30
         } else if alarmType == .national || alarm.name == "Simchat Torah" {
@@ -609,6 +627,7 @@ class AlarmLogic {
         if groupLabel.keys.contains(alarmType) && alarmName != Once {
             alarm.isGrouped = alarm.name != SaturdayErevPesach
         }
+        Logger.shared.info("initializeAlarm: \(alarm.name, privacy: .public)")
         modelContext.insert(alarm)
     }
 }
