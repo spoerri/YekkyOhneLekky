@@ -92,13 +92,13 @@ class AlarmModel {
             if ids.contains(alarm.id) {
                 do {
                     if case let .fixed(date) = alarm.schedule {
-                        Logger.shared.info("unsched: \(date.formatted(), privacy: .public)")
+                        AlarmLogger.shared.info("unsched: \(date.formatted(), privacy: .public)")
                     } else {
-                        Logger.shared.info("unsched not fixed?!: \(alarm.id, privacy: .public)") //something's wrong
+                        AlarmLogger.shared.info("unsched not fixed?!: \(alarm.id, privacy: .public)") //something's wrong
                     }
                     try AlarmManager.shared.stop(id: alarm.id)
                 } catch {
-                    Logger.shared.error("could not cancel \(alarm.id)")
+                    AlarmLogger.shared.error("could not cancel \(alarm.id)")
                 }
                 
             }

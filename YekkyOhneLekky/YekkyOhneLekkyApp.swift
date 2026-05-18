@@ -25,9 +25,9 @@ struct YekkyOhneLekkyApp: App {
         }
         do {
             let configuredAlarms = try container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", ")
-            //Logger.shared.info("Configured alarms: \(configuredAlarms)")
+            //AlarmLogger.shared.info("Configured alarms: \(configuredAlarms)")
         } catch {
-            Logger.shared.error("Could not fetch all alarms")
+            AlarmLogger.shared.error("Could not fetch all alarms")
         }
     }
     
@@ -37,7 +37,7 @@ struct YekkyOhneLekkyApp: App {
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            Logger.shared.error("Could not schedule app refresh: \(error, privacy: .public)")
+            AlarmLogger.shared.error("Could not schedule app refresh: \(error, privacy: .public)")
         }
     }
     
@@ -55,7 +55,7 @@ struct YekkyOhneLekkyApp: App {
         .backgroundTask(.appRefresh(bgTaskIdentifier)) { @Sendable context in
             do {
                 scheduleAppRefresh()
-                Logger.shared.info("backgroundTask")
+                AlarmLogger.shared.info("backgroundTask")
                 try await AlarmActor.shared.scheduleNextAlarms()
             } catch {
                 
@@ -71,10 +71,10 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     
     public func perform() async throws -> some IntentResult {
         do {
-            Logger.shared.info("intent")
+            AlarmLogger.shared.info("intent")
             try await AlarmActor.shared.scheduleNextAlarms()
         } catch {
-            Logger.shared.error("Error scheduling next alarms")
+            AlarmLogger.shared.error("Error scheduling next alarms")
         }
         return .result()
     }

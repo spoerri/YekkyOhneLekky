@@ -26,7 +26,7 @@ struct AlarmListView: View {
             }
             return d.timeIntervalSince1970
         } catch {
-            Logger.shared.error("Couldn't getAlarmDateAndTime")
+            AlarmLogger.shared.error("Couldn't getAlarmDateAndTime")
             return 0
         }
     }
@@ -50,7 +50,7 @@ struct AlarmListView: View {
                             do {
                                 try alarm.unschedule()
                             } catch {
-                                Logger.shared.error("Couldn't disable all")
+                                AlarmLogger.shared.error("Couldn't disable all")
                                 showAlert = true
                             }
                         }
@@ -73,7 +73,7 @@ struct AlarmListView: View {
                 do {
                     try await AlarmLogic.initializeAlarms(Testable.Date(), modelContext: modelContext, alarms: alarms)
                 } catch {
-                    Logger.shared.error("Could not initialize")
+                    AlarmLogger.shared.error("Could not initialize")
                     showAlert = true
                 }
             }
