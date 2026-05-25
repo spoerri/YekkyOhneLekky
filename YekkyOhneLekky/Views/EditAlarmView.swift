@@ -130,13 +130,13 @@ struct EditAlarmView: View {
                 editingAlarm.minute = Calendar.current.component(.minute, from: selectedTime)
                 editingAlarm.maybeDayToFire = maybeDayToFire
                 editingAlarm.nextDayToFire = nextDayToFire
-                AlarmLogger.shared.info("saveAlarm: \(editingAlarm.name, privacy: .public)")
+                AlarmLogger.shared.info("saveAlarm: \(editingAlarm.name)")
                 //TODO should actually not save any changes if there's an exception in AlarmLogic
                 try await AlarmLogic.saveAlarm(Testable.Date(), editingAlarm, originalDaysOfWeek, originalDayToFire)
             }
             dismiss()
         } catch {
-            AlarmLogger.shared.error("Error saving alarm: \(error, privacy: .public)")
+            AlarmLogger.shared.error("Error saving alarm: \(error)")
         }
     }
     

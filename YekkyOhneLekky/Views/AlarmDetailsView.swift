@@ -37,6 +37,11 @@ struct AlarmDetailsView: View {
                     }
                 }
             }
+            if let groupLabel = AlarmLogic.groupLabel[alarmType] {
+                if alarmName != AlarmLogic.Once || isEnabled { //the one-off template isn't grouped with the actual one-offs
+                    Toggle("Configured with other "+groupLabel, isOn: $isGrouped)
+                }
+            }
             if alarmName != AlarmLogic.Once || isEnabled {
                 DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
                     .onChange(of: selectedTime, initial: true) { //false doesn't work, so use initialSelectedTime var
@@ -54,11 +59,6 @@ struct AlarmDetailsView: View {
                         isGrouped = isEnabled
                     }
                 }
-            if let groupLabel = AlarmLogic.groupLabel[alarmType] {
-                if alarmName != AlarmLogic.Once || isEnabled { //the one-off template isn't grouped with the actual one-offs
-                    Toggle("Configured with other "+groupLabel, isOn: $isGrouped)
-                }
-            }
             Picker("Duration", selection: $duration) {
                 Text("30 seconds").tag(TimeInterval(30))
                 Text("1 minute").tag(TimeInterval(60))

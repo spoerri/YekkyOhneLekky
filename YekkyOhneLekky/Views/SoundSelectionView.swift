@@ -87,7 +87,7 @@ struct SoundSelectionView: View {
                 AlarmLogger.shared.error("❌ Failed to start playback")
             }
         } catch {
-            AlarmLogger.shared.error("❌ Error playing sound: \(error, privacy: .public)")
+            AlarmLogger.shared.error("❌ Error playing sound: \(error)")
         }
     }
     

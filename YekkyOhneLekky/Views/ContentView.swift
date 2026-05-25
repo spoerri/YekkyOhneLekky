@@ -8,11 +8,17 @@ let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionStri
 let versionLastRunKey = "versionLastRun"
 
 struct ContentView: View {
+    @Binding var showAlert: Bool
     @State private var showModal = UserDefaults.standard.string(forKey: versionLastRunKey) != version
     var body: some View {
         AlarmListView(showModal: $showModal)
             .sheet(isPresented: $showModal) {
                 ModalView()
+            }
+            .alert("Error", isPresented: $showAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Something went wrong. Please reconfigure your alarms.")
             }
     }
 }
@@ -35,6 +41,8 @@ YekkyOhneLekky can even relieve you of turning off your regular weekday alarms b
 For now, please remember to manually update your alarms for erev pesach falling on shabbos, yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
 
 Yekky should be smart about multiple alarms occurring on the same day; it prefers the sensible one. “One off”s beat yom tov, yom tov beats shabbos, shabbos beats national holidays, national holidays beat rosh chodesh, and rosh chodesh beats weekdays (e.g. Tuesday). (Fasts and chol hamoed have the same precedence as rosh chodesh. Sundays have the same precedence as national holidays.) The simple explanation is that on “work days”, shacharis is often scheduled to enable people to get to work on time.
+
+You can [visit our FAQ on the web](https://www.yekky.spoer.org/home/faq) for more info.
 
 After you dismiss this message, you can see it again by scrolling to the bottom of the app. After all the holidays, there is an About button as well as a button to disable all alarms.
 
@@ -66,6 +74,7 @@ With love, and with gratitude to the boreh olam, Joshua Spoerri
 }
 
 #Preview {
-    ContentView()
+    @Previewable @State var value = false
+    ContentView(showAlert: $value)
         .modelContainer(for: AlarmModel.self, inMemory: true)
 }

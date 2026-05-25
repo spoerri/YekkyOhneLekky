@@ -18,11 +18,16 @@ struct AlarmListView: View {
     private func adjusted(_ a: AlarmModel) -> Double {
         do {
             var d: Date = try a.getAlarmDateAndTime()
+            let today = Testable.Date()
             if a.name == AlarmLogic.Once {
                 return 0
             }
-            if d < Testable.Date() { //for things that don't come every year, e.g. sometimes vayakehl&Pekudei are not a double parsha
-                d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
+            if d < today { //for disabled and things that don't come every year, e.g. sometimes vayakehl&Pekudei are not a double parsha
+                if a.alarmType == .roshChodesh {
+                    d = Calendar.current.date(byAdding: .day, value: 7, to: today)! //after week days
+                } else if !a.isRecurring() {
+                    d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
+                }
             }
             return d.timeIntervalSince1970
         } catch {

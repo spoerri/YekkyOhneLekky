@@ -7,14 +7,15 @@ import SwiftData
 struct LogView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    let logs: [OSLogEntryLog]
+    @Query private var logs: [AlarmLogger.AlarmLog]
+//    let logs: [OSLogEntryLog]
 
     init() {
-        let logStore = try! OSLogStore(scope: .currentProcessIdentifier)
-        self.logs = try! logStore.getEntries(
-            at: logStore.position(timeIntervalSinceEnd: 7*24*60*60),
-            matching: NSPredicate(format: "subsystem = \"\(Logger.subsystem)\"")
-        ).compactMap({ $0 as? OSLogEntryLog })
+//        let logStore = try! OSLogStore(scope: .currentProcessIdentifier)
+//        self.logs = try! logStore.getEntries(
+//            at: logStore.position(timeIntervalSinceEnd: 7*24*60*60),
+//            matching: NSPredicate(format: "subsystem = \"\(Logger.subsystem)\"")
+//        ).compactMap({ $0 as? OSLogEntryLog })
     }
 
     var body: some View {

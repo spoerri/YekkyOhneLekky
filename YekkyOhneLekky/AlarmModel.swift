@@ -44,7 +44,7 @@ class AlarmModel {
         self.repetitions = repetitions
         self.repetitionDelay = repetitionDelay
         self.alarmType = alarmType
-        
+        //TODO maybe these are evil
         self.isExplicit = alarmType == .explicit
         self.isWeekDay = alarmType == .weekDay
         self.isShabbos = alarmType == .saturday
@@ -87,14 +87,14 @@ class AlarmModel {
     }
     
     func unschedule() throws {
-        let count = try AlarmManager.shared.alarms.count
+//        let count = try AlarmManager.shared.alarms.count
         for alarm in try AlarmManager.shared.alarms {
             if ids.contains(alarm.id) {
                 do {
                     if case let .fixed(date) = alarm.schedule {
-                        AlarmLogger.shared.info("unsched: \(date.formatted(), privacy: .public)")
+                        AlarmLogger.shared.info("unsched: \(date.formatted())")
                     } else {
-                        AlarmLogger.shared.info("unsched not fixed?!: \(alarm.id, privacy: .public)") //something's wrong
+                        AlarmLogger.shared.info("unsched not fixed?!: \(alarm.id)") //something's wrong
                     }
                     try AlarmManager.shared.stop(id: alarm.id)
                 } catch {
@@ -123,6 +123,10 @@ class AlarmModel {
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
+    }
+    
+    func isRecurring() -> Bool {
+        return alarmType == .weekDay || alarmType == .saturday || alarmType == .roshChodesh
     }
 }
 

@@ -14,21 +14,32 @@ extension Logger {
 @main
 struct YekkyOhneLekkyApp: App {
     @Environment(\.scenePhase) private var phase
+    @State private var showAlert = false
     let container: ModelContainer
     let bgTaskIdentifier = "YekkyOhneLekky.refresh"
+    let alarmActor: AlarmActor
     
     init() {
         do {
-            container = try ModelContainer(for: AlarmModel.self)
+            container = try ModelContainer(for: AlarmModel.self, AlarmLogger.AlarmLog.self)
         } catch {
-            fatalError("Failed to initialize ModelContainer")
+            let applicationSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let storeURL = applicationSupportURL.appending(path: "default.store")
+            
+            do {
+//                try FileManager.default.copyItem(at: storeURL, to: storeURL.appending(path: "bak")) //TODO figure out why it still fails
+                try FileManager.default.removeItem(at: storeURL)
+                container = try ModelContainer(for: AlarmModel.self, AlarmLogger.AlarmLog.self)
+                AlarmLogger.shared.error("Remove persistence store")
+                showAlert = true
+            } catch {
+                fatalError("Failed to initialize ModelContainer")
+            }
         }
-        do {
-            let configuredAlarms = try container.mainContext.fetch(FetchDescriptor<AlarmModel>()).filter{$0.isEnabled}.map{$0.name+": "+$0.nextDayToFire.description}.joined(separator: ", ")
-            //AlarmLogger.shared.info("Configured alarms: \(configuredAlarms)")
-        } catch {
-            AlarmLogger.shared.error("Could not fetch all alarms")
-        }
+        alarmActor = AlarmActor(modelContainer: container)
+        AlarmLogger.shared.modelContext = container.mainContext
+        let alarmActorCopy = alarmActor
+        AppDependencyManager.shared.add { alarmActorCopy }
     }
     
     nonisolated func scheduleAppRefresh() {
@@ -37,13 +48,13 @@ struct YekkyOhneLekkyApp: App {
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            AlarmLogger.shared.error("Could not schedule app refresh: \(error, privacy: .public)")
+            AlarmLogger.shared.error("Could not schedule app refresh: \(String(describing: error))")
         }
     }
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(showAlert: $showAlert)
         }
         .modelContainer(container)
         .onChange(of: phase) { newPhase, arg in //TODO need to care about arg?
@@ -56,7 +67,7 @@ struct YekkyOhneLekkyApp: App {
             do {
                 scheduleAppRefresh()
                 AlarmLogger.shared.info("backgroundTask")
-                try await AlarmActor.shared.scheduleNextAlarms()
+                try await alarmActor.scheduleNextAlarms()
             } catch {
                 
             }
@@ -68,26 +79,19 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     public static var title: LocalizedStringResource = "Schedule next YekkyOhneLekky alarm"
     public static var description = IntentDescription("Schedule next YekkyOhneLekky alarm")
     public static var openAppWhenRun = false
+    @Dependency private var alarmActor: AlarmActor
     
     public func perform() async throws -> some IntentResult {
         do {
             AlarmLogger.shared.info("intent")
-            try await AlarmActor.shared.scheduleNextAlarms()
+            try await alarmActor.scheduleNextAlarms()
         } catch {
             AlarmLogger.shared.error("Error scheduling next alarms")
         }
         return .result()
     }
 
-    @Parameter(title: "alarmID")
-    public var alarmID: String
-
-    public init(alarmID: String) { //alarmID doesn't really matter now, but i believe this is expected signature
-        self.alarmID = alarmID
-    }
-
     public init() {
-        self.alarmID = ""
     }
 }
 
@@ -95,4 +99,3 @@ enum AlarmError: Error, Sendable {
     case permissionDenied
     case ugh
 }
-
