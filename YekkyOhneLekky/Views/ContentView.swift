@@ -18,7 +18,7 @@ struct ContentView: View {
             .alert("Error", isPresented: $showAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text("Something went wrong. Please reconfigure your alarms.")
+                Text("The schema changed. Please reset your alarms.")
             }
     }
 }
@@ -36,11 +36,11 @@ YekkyOhneLekky provides shabbos and yom tov wake-up alarms that don't bother peo
 
 YekkyOhneLekky also automatically sets jewish holiday alarms appropriately based on the jewish calendar. If you go to the same minyan for each holiday from year to year, you'll never have to worry about resetting that alarm; it'll continue to ring at the same time automatically on the right date each year.
 
-YekkyOhneLekky can even relieve you of turning off your regular weekday alarms before holidays. Put those alarms in Yekky instead of Apple's standard Clock, and they'll only be used on non-holidays. It supports different alarms for US national holidays, as well as rosh chodesh, fasts, and holidays without an issur melacha. It also supports "one off" alarms that override any of the above. You can use this feature to test alarms when you first start using the app, and as a "snooze" replacement.
+YekkyOhneLekky can even relieve you of turning off your regular weekday alarms before holidays. Put those alarms in Yekky instead of Apple's standard Clock, and they'll only be used on non-holidays. It supports different alarms for US national holidays, as well as rosh chodesh, fasts, and holidays without an issur melacha. For now, please remember to manually update your alarms for erev pesach falling on shabbos, yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
 
-For now, please remember to manually update your alarms for erev pesach falling on shabbos, yomim noraim selichos, behab, minyanim that are close to zman talis or zman kriyas shema, and anything you don't see an entry for in the app.
+Yekky should be smart about multiple alarms occurring on the same morning; it prefers the sensible one. “One off”s beat yom tov, yom tov beats shabbos, shabbos beats national holidays, national holidays beat rosh chodesh, and rosh chodesh beats weekdays (e.g. Tuesday). (Fasts and chol hamoed have the same precedence as rosh chodesh. Sundays have the same precedence as national holidays.) The simple explanation is that on “work days”, shacharis is often scheduled to enable people to get to work on time.
 
-Yekky should be smart about multiple alarms occurring on the same day; it prefers the sensible one. “One off”s beat yom tov, yom tov beats shabbos, shabbos beats national holidays, national holidays beat rosh chodesh, and rosh chodesh beats weekdays (e.g. Tuesday). (Fasts and chol hamoed have the same precedence as rosh chodesh. Sundays have the same precedence as national holidays.) The simple explanation is that on “work days”, shacharis is often scheduled to enable people to get to work on time.
+To ring alarms for different times on the same day, use the "Just Once" row for now, and select "Extra (e.g. for a nap). Currently there is no support for recurring different alarms on the same day, so you have to manually set them each week if desired.
 
 You can [visit our FAQ on the web](https://www.yekky.spoer.org/home/faq) for more info.
 

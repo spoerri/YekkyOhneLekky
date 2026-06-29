@@ -48,7 +48,7 @@ struct YekkyOhneLekkyApp: App {
         do {
             try BGTaskScheduler.shared.submit(request)
         } catch {
-            AlarmLogger.shared.error("Could not schedule app refresh: \(String(describing: error))")
+            AlarmLogger.shared.error("Could not submit bg task request: \(String(describing: error))")
         }
     }
     
@@ -69,7 +69,7 @@ struct YekkyOhneLekkyApp: App {
                 AlarmLogger.shared.info("backgroundTask")
                 try await alarmActor.scheduleNextAlarms()
             } catch {
-                
+                AlarmLogger.shared.error("backgroundTask failed: \(String(describing: error))")
             }
         }
     }
@@ -86,7 +86,7 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
             AlarmLogger.shared.info("intent")
             try await alarmActor.scheduleNextAlarms()
         } catch {
-            AlarmLogger.shared.error("Error scheduling next alarms")
+            AlarmLogger.shared.error("intent failed: \(String(describing: error))")
         }
         return .result()
     }

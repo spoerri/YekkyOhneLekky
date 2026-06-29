@@ -1,6 +1,8 @@
 import SwiftUI
+import SwiftData
 
 struct AlarmDetailsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Binding var alarmName: String
     @Binding var alarmType: AlarmType
     @Binding var selectedTime: Date
@@ -9,6 +11,7 @@ struct AlarmDetailsView: View {
     @Binding var repetitionDelay: TimeInterval
     @Binding var isEnabled: Bool
     @Binding var isOverridden: Bool
+    @Binding var isExtra: Bool
     @Binding var isGrouped: Bool
     @Binding var maybeDayToFire: Date
     @Binding var nextDayToFire: Date
@@ -26,7 +29,17 @@ struct AlarmDetailsView: View {
         Section(header: Text("Alarm Details")) {
             if alarmName != AlarmLogic.Once || isEnabled {
                 if alarmName == AlarmLogic.Once || alarmType == .explicit {
-                        DatePicker("Date", selection: $nextDayToFire, displayedComponents: .date)
+                    DatePicker("Date", selection: $nextDayToFire, displayedComponents: .date)
+                        .onChange(of: nextDayToFire) {
+                            //default to the time of the alarm to be overridden
+                            if alarmName == AlarmLogic.Once {
+                                let start = Calendar.current.startOfDay(for: nextDayToFire)
+                                let stop = start + TimeInterval(60*60*24)
+                                if let existingAlarm = try? modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> {start <= $0.nextDayToFire && $0.nextDayToFire < stop && $0.name != alarmName && !$0.isOverridden})).first {
+                                    selectedTime = EditAlarmView.getTime(Calendar.current, existingAlarm)
+                                }
+                            }
+                        }
                 } else {
                     HStack {
                         Text("Next date:")
@@ -52,6 +65,9 @@ struct AlarmDetailsView: View {
                             initialSelectedTime = selectedTime
                         }
                     }
+            }
+            if alarmType == .explicit {
+                Toggle("Extra (e.g. for a nap)", isOn: $isExtra)
             }
             Toggle("Enabled", isOn: $isEnabled)
                 .onChange(of: isEnabled, initial: true) {

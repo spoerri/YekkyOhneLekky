@@ -21,6 +21,7 @@ struct EditAlarmView: View {
     @State private var repetitionDelay: TimeInterval = -1
     @State private var isEnabled: Bool = true
     @State private var isOverridden: Bool = true
+    @State private var isExtra: Bool = false
     @State private var isGrouped: Bool = true
     @State private var maybeDayToFire: Date = Testable.Date()
     @State private var nextDayToFire: Date = Testable.Date()
@@ -44,6 +45,7 @@ struct EditAlarmView: View {
                     repetitionDelay: $repetitionDelay,
                     isEnabled: $isEnabled,
                     isOverridden: $isOverridden,
+                    isExtra: $isExtra,
                     isGrouped: $isGrouped,
                     maybeDayToFire: $maybeDayToFire,
                     nextDayToFire: $nextDayToFire,
@@ -85,6 +87,10 @@ struct EditAlarmView: View {
         }
     }
     
+    static func getTime(_ calendar: Calendar, _ alarm: AlarmModel) -> Date {
+        return calendar.date(bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: Testable.Date()) ?? Testable.Date()
+    }
+    
     private func loadAlarmData() throws {
         guard let alarm = editingAlarm else { return }
         
@@ -93,6 +99,7 @@ struct EditAlarmView: View {
         selectedSound = alarm.selectedSound
         isEnabled = alarm.isEnabled
         isOverridden = alarm.isOverridden
+        isExtra = alarm.isExtra
         isGrouped = alarm.isGrouped
         daysOfWeek = alarm.daysOfWeek
         
@@ -101,8 +108,9 @@ struct EditAlarmView: View {
             alarm.hour = calendar.component(.hour, from: Testable.Date())
             alarm.minute = calendar.component(.minute, from: Testable.Date()) + 1
             isEnabled = true
+            isExtra = false
         }
-        selectedTime = calendar.date(bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: Testable.Date()) ?? Testable.Date()
+        selectedTime = EditAlarmView.getTime(calendar, alarm)
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
@@ -116,11 +124,15 @@ struct EditAlarmView: View {
             try await requestAlarmAuthorization()
             
             if let editingAlarm = editingAlarm {
-                let originalDayToFire = (editingAlarm.isEnabled && !isEnabled) || editingAlarm.nextDayToFire != nextDayToFire ? editingAlarm.nextDayToFire : nil
+                let originalDayToFire = (editingAlarm.isEnabled && !isEnabled)
+                    || (!editingAlarm.isExtra && isExtra)
+                    || editingAlarm.nextDayToFire != nextDayToFire
+                    ? editingAlarm.nextDayToFire : nil
                 let originalDaysOfWeek = editingAlarm.daysOfWeek
                 editingAlarm.daysOfWeek = daysOfWeek
                 editingAlarm.isEnabled = isEnabled
                 editingAlarm.isOverridden = isOverridden
+                editingAlarm.isExtra = isExtra
                 editingAlarm.isGrouped = isGrouped
                 editingAlarm.selectedSound = selectedSound
                 editingAlarm.duration = duration

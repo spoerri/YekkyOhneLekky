@@ -36,7 +36,7 @@ struct LogView: View {
             }
             Spacer()
             Button("Copy") {
-                UIPasteboard.general.string = logs.map { $0.composedMessage }.joined(separator: "\n")
+                UIPasteboard.general.string = logs.map { $0.date.formatted() + ": " + $0.composedMessage }.joined(separator: "\n")
             }
             Spacer()
         }

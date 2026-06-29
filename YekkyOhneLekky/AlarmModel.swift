@@ -11,10 +11,12 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
+    //TODO use date components or strings for these? be sure of daylight savings
     var maybeDayToFire: Date //note that this may or may not have the alarm time in it
     var nextDayToFire: Date //note that this may or may not have the alarm time in it
     var isEnabled: Bool
     var isOverridden: Bool //TODO remove, replaced by maybeDayToFire != nextDayToFire
+    var isExtra: Bool
     var isGrouped: Bool
     var daysOfWeek: Set<String>
     var selectedSound: String?
@@ -22,12 +24,12 @@ class AlarmModel {
     var duration: TimeInterval?
     var repetitions: Int
     var repetitionDelay: TimeInterval
-    var alarmType: AlarmType
+    var alarmType: AlarmType //TODO change to an Int, to avoid crashes?
     var isExplicit: Bool
     var isWeekDay: Bool
     var isShabbos: Bool
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: Date, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: Date, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
@@ -36,6 +38,7 @@ class AlarmModel {
         self.nextDayToFire = nextDayToFire
         self.isEnabled = isEnabled
         self.isOverridden = isOverridden
+        self.isExtra = isExtra
         self.isGrouped = isGrouped
         self.daysOfWeek = daysOfWeek
         self.createdAt = Date()
@@ -87,7 +90,7 @@ class AlarmModel {
     }
     
     func unschedule() throws {
-//        let count = try AlarmManager.shared.alarms.count
+        var unchanged = ids.count
         for alarm in try AlarmManager.shared.alarms {
             if ids.contains(alarm.id) {
                 do {
@@ -96,12 +99,15 @@ class AlarmModel {
                     } else {
                         AlarmLogger.shared.info("unsched not fixed?!: \(alarm.id)") //something's wrong
                     }
-                    try AlarmManager.shared.stop(id: alarm.id)
+                    try AlarmManager.shared.cancel(id: alarm.id)
+                    unchanged -= 1
                 } catch {
                     AlarmLogger.shared.error("could not cancel \(alarm.id)")
                 }
-                
             }
+        }
+        if unchanged > 0 {
+            AlarmLogger.shared.info("unsched unnesc: \(unchanged)")
         }
         ids.removeAll()
     }
@@ -123,6 +129,7 @@ class AlarmModel {
         duration = alarm.duration
         repetitions = alarm.repetitions
         repetitionDelay = alarm.repetitionDelay
+        isExtra = alarm.isExtra
     }
     
     func isRecurring() -> Bool {

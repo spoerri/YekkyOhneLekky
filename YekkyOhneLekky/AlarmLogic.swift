@@ -286,12 +286,18 @@ class AlarmLogic {
             }
         }
         editingAlarm.name = AlarmModel.nameFromDaysOfWeek(editingAlarm.daysOfWeek)
+        editingAlarm.maybeDayToFire = try getNextDayToFire(now, editingAlarm)
+        editingAlarm.nextDayToFire = editingAlarm.maybeDayToFire
         await schedule(now, editingAlarm)
     }
     
     private static func saveNewOneOffAlarm(_ now: Date, _ editingAlarm: AlarmModel, _ modelContext: ModelContext) async {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
+        if (editingAlarm.isExtra) {
+            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+        } else {
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+        }
         let newAlarm = AlarmModel(
             name: dateFormatter.string(from: editingAlarm.nextDayToFire),
             alarmType: AlarmType.explicit,
@@ -318,6 +324,10 @@ class AlarmLogic {
     }
     
     private class func overrideAsAppropriate(_ now: Date, _ alarm: AlarmModel) throws {
+        if alarm.isExtra {
+            return
+        }
+        
         if alarm.isOverridden && Calendar.current.startOfDay(for: alarm.nextDayToFire) == Calendar.current.startOfDay(for: now) {
             return
         }
@@ -332,7 +342,9 @@ class AlarmLogic {
             start <= other.nextDayToFire && other.nextDayToFire < stop &&
             other.name != alarmName && !other.isOverridden && other.name != Once})) {
             for other in sameDayAlarms {
-                if other.alarmType > alarm.alarmType {
+                if other.isExtra {
+                    //extra alarms neither override nor are overridden
+                } else if other.alarmType > alarm.alarmType {
                     try other.unschedule()
                     other.isOverridden = true
                     other.nextDayToFire = try getNextDayToFire(nextDay(now), other)
@@ -346,13 +358,13 @@ class AlarmLogic {
         let dayOfWeek = allDaysOfWeek[Calendar.current.component(.weekday, from: alarm.nextDayToFire) - 1]
         if dayOfWeek == Saturday && alarm.alarmType > .saturday {
             try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
-                other.isEnabled && other.isShabbos })).forEach { _ in
+                other.isEnabled && other.isShabbos && !other.isExtra })).forEach { _ in
                 alarm.isOverridden = true
                 alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
             }
         } else if dayOfWeek == Sunday && alarm.alarmType > .national && alarm.alarmType != .weekDay {
             try alarm.modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
-                other.isEnabled && other.isWeekDay })).forEach { other in
+                other.isEnabled && other.isWeekDay && !other.isExtra })).forEach { other in
                     if other.daysOfWeek.contains(dayOfWeek) {
                         alarm.isOverridden = true
                         alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
@@ -458,7 +470,7 @@ class AlarmLogic {
     
     public class func isFullyScheduled(_ alarm: AlarmModel) throws -> Bool {
         let unscheduled = try Set(alarm.ids).subtracting(AlarmManager.shared.alarms.map { $0.id }).count
-        if unscheduled != 0 && unscheduled != alarm.ids.count { AlarmLogger.shared.info("partially unscheduled! i.e. \(unscheduled)") }
+        if unscheduled != alarm.ids.count { AlarmLogger.shared.info("partially unscheduled! i.e. \(unscheduled)") }
         return unscheduled == 0
     }
     
@@ -498,7 +510,7 @@ class AlarmLogic {
     public static func initializeAlarms(_ now: Date, modelContext: ModelContext, alarms: [AlarmModel]) async throws {
         AlarmLogger.shared.info("initializeAlarms")
         printScheduledAlarms()
-        //AlarmLogger.shared.info("stopping them all :)")
+        AlarmLogger.shared.info("unsched all")
         try AlarmManager.shared.alarms.forEach{try AlarmManager.shared.stop(id: $0.id )}
         
         let chagim = getChagim(now)
