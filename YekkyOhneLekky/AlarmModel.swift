@@ -29,7 +29,7 @@ class AlarmModel {
     var isWeekDay: Bool
     var isShabbos: Bool
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: Date, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: Date, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval? = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
@@ -85,31 +85,37 @@ class AlarmModel {
         return fullDate
     }
     
-    func isSameDayAs(_ date: Date) -> Bool {
-        return Calendar.current.isDate(maybeDayToFire, inSameDayAs: date)
+    func isOnOrBefore(_ date: Date) -> Bool {
+        return maybeDayToFire < date || Calendar.current.isDate(maybeDayToFire, inSameDayAs: date)
     }
     
     func unschedule() throws {
-        var unchanged = ids.count
-        for alarm in try AlarmManager.shared.alarms {
-            if ids.contains(alarm.id) {
-                do {
-                    if case let .fixed(date) = alarm.schedule {
-                        AlarmLogger.shared.info("unsched: \(date.formatted())")
-                    } else {
-                        AlarmLogger.shared.info("unsched not fixed?!: \(alarm.id)") //something's wrong
-                    }
-                    try AlarmManager.shared.cancel(id: alarm.id)
-                    unchanged -= 1
-                } catch {
-                    AlarmLogger.shared.error("could not cancel \(alarm.id)")
-                }
+        var scheduled = Dictionary<UUID, String>()
+        for alarm in try AlarmLogic.Manager.alarms {
+            if case let .fixed(date) = alarm.schedule {
+                scheduled[alarm.id] = date.formatted()
+            } else {
+                AlarmLogger.shared.info("unsched not fixed?!: \(alarm.id)") //app only uses fixed!
             }
         }
-        if unchanged > 0 {
-            AlarmLogger.shared.info("unsched unnesc: \(unchanged)")
+        var expiredCount = 0
+        for id in ids {
+            do {
+                if let d = scheduled[id] {
+                    AlarmLogger.shared.info("unsched \(d)")
+                    try AlarmLogic.Manager.cancel(id: id)
+                    ids.removeAll(where: { $0 == id }) //if there's an exception, try again next time
+                } else {
+                    ids.removeAll(where: { $0 == id })
+                    expiredCount += 1
+                }
+            } catch {
+                AlarmLogger.shared.error("could not unschedule \(id)!")
+            }
         }
-        ids.removeAll()
+        if expiredCount > 0 {
+            AlarmLogger.shared.info("unsched \(expiredCount) expired")
+        }
     }
     
     static func nameFromDaysOfWeek(_ daysOfWeek: Set<String>) -> String {

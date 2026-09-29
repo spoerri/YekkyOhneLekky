@@ -144,7 +144,7 @@ struct EditAlarmView: View {
                 editingAlarm.nextDayToFire = nextDayToFire
                 AlarmLogger.shared.info("saveAlarm: \(editingAlarm.name)")
                 //TODO should actually not save any changes if there's an exception in AlarmLogic
-                try await AlarmLogic.saveAlarm(Testable.Date(), editingAlarm, originalDaysOfWeek, originalDayToFire)
+                try await AlarmLogic.saveAlarm(Testable.Date(), modelContext, editingAlarm, originalDaysOfWeek, originalDayToFire)
             }
             dismiss()
         } catch {

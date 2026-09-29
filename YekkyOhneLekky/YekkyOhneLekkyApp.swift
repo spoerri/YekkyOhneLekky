@@ -40,6 +40,30 @@ struct YekkyOhneLekkyApp: App {
         AlarmLogger.shared.modelContext = container.mainContext
         let alarmActorCopy = alarmActor
         AppDependencyManager.shared.add { alarmActorCopy }
+        
+        if false {
+            Task {
+                for await scheduled in AlarmManager.shared.alarmUpdates {
+                    //                AlarmLogger.shared.info("alarmUpdates: \(scheduled.map(\.schedule))")
+                    let scheduledIDs = scheduled.map(\.id)
+                    let context = try ModelContainer(for: AlarmModel.self, AlarmLogger.AlarmLog.self).mainContext
+                    var configedNotSchedule = Set<Date>()
+                    var configedIDs = Set<UUID>()
+                    for configured in try context.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { !$0.ids.isEmpty })) {
+                        try configured.ids.filter { !scheduledIDs.contains($0) }.forEach { _ in configedNotSchedule.insert(try configured.getAlarmDateAndTime()) }
+                        configedIDs = configedIDs.union(configured.ids)
+                    }
+                    if !configedNotSchedule.isEmpty {
+                        AlarmLogger.shared.error("Alarm not scheduled \(configedNotSchedule)")
+                    }
+                    let scheduledNotConfiged = scheduled.filter { !configedIDs.contains($0.id) }
+                    if !scheduledNotConfiged.isEmpty {
+                        AlarmLogger.shared.error("Unknown alarms scheduled \(scheduledNotConfiged)")
+                    }
+                    
+                }
+            }
+        }
     }
     
     nonisolated func scheduleAppRefresh() {

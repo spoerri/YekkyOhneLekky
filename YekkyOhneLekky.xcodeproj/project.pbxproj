@@ -11,8 +11,19 @@
 		03A8C0A82E80AF2100EA0572 /* Hebcal in Frameworks */ = {isa = PBXBuildFile; productRef = 03A8C0A72E80AF2100EA0572 /* Hebcal */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		0325023B3028AE1C0067C24D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 03AFC1272E80AA8300F106C8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 03AFC12E2E80AA8300F106C8;
+			remoteInfo = YekkyOhneLekky;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		031B7DC02EC442530065B407 /* Alarm Clock.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Alarm Clock.icon"; sourceTree = "<group>"; };
+		032502373028AE1C0067C24D /* YekkyOhneLekkyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YekkyOhneLekkyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		03AFC12F2E80AA8300F106C8 /* YekkyOhneLekky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = YekkyOhneLekky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -27,6 +38,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		032502383028AE1C0067C24D /* YekkyOhneLekkyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = YekkyOhneLekkyTests;
+			sourceTree = "<group>";
+		};
 		03AFC1312E80AA8300F106C8 /* YekkyOhneLekky */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -35,14 +51,16 @@
 			path = YekkyOhneLekky;
 			sourceTree = "<group>";
 		};
-		03FF4D0C2E80EF1000A03924 /* Test */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Test;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		032502343028AE1C0067C24D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		03AFC12C2E80AA8300F106C8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -54,12 +72,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		03250273302962280067C24D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		03AFC1262E80AA8300F106C8 = {
 			isa = PBXGroup;
 			children = (
 				031B7DC02EC442530065B407 /* Alarm Clock.icon */,
 				03AFC1312E80AA8300F106C8 /* YekkyOhneLekky */,
-				03FF4D0C2E80EF1000A03924 /* Test */,
+				032502383028AE1C0067C24D /* YekkyOhneLekkyTests */,
+				03250273302962280067C24D /* Frameworks */,
 				03AFC1302E80AA8300F106C8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -68,6 +94,7 @@
 			isa = PBXGroup;
 			children = (
 				03AFC12F2E80AA8300F106C8 /* YekkyOhneLekky.app */,
+				032502373028AE1C0067C24D /* YekkyOhneLekkyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -75,6 +102,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		032502363028AE1C0067C24D /* YekkyOhneLekkyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0325023F3028AE1C0067C24D /* Build configuration list for PBXNativeTarget "YekkyOhneLekkyTests" */;
+			buildPhases = (
+				032502333028AE1C0067C24D /* Sources */,
+				032502343028AE1C0067C24D /* Frameworks */,
+				032502353028AE1C0067C24D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0325023C3028AE1C0067C24D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				032502383028AE1C0067C24D /* YekkyOhneLekkyTests */,
+			);
+			name = YekkyOhneLekkyTests;
+			packageProductDependencies = (
+			);
+			productName = YekkyOhneLekkyTests;
+			productReference = 032502373028AE1C0067C24D /* YekkyOhneLekkyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		03AFC12E2E80AA8300F106C8 /* YekkyOhneLekky */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 03AFC13A2E80AA8600F106C8 /* Build configuration list for PBXNativeTarget "YekkyOhneLekky" */;
@@ -105,9 +155,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2600;
+				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					032502363028AE1C0067C24D = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 03AFC12E2E80AA8300F106C8;
+					};
 					03AFC12E2E80AA8300F106C8 = {
 						CreatedOnToolsVersion = 26.0;
 					};
@@ -131,11 +185,19 @@
 			projectRoot = "";
 			targets = (
 				03AFC12E2E80AA8300F106C8 /* YekkyOhneLekky */,
+				032502363028AE1C0067C24D /* YekkyOhneLekkyTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		032502353028AE1C0067C24D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		03AFC12D2E80AA8300F106C8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -147,6 +209,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		032502333028AE1C0067C24D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		03AFC12B2E80AA8300F106C8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -156,7 +225,57 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		0325023C3028AE1C0067C24D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 03AFC12E2E80AA8300F106C8 /* YekkyOhneLekky */;
+			targetProxy = 0325023B3028AE1C0067C24D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		0325023D3028AE1C0067C24D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jsyek1.YekkyOhneLekkyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YekkyOhneLekky.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/YekkyOhneLekky";
+			};
+			name = Debug;
+		};
+		0325023E3028AE1C0067C24D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jsyek1.YekkyOhneLekkyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/YekkyOhneLekky.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/YekkyOhneLekky";
+			};
+			name = Release;
+		};
 		03AFC1382E80AA8600F106C8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -219,6 +338,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_ENABLE_EXPLICIT_MODULES = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -278,6 +398,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_ENABLE_EXPLICIT_MODULES = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -355,6 +476,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0325023F3028AE1C0067C24D /* Build configuration list for PBXNativeTarget "YekkyOhneLekkyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0325023D3028AE1C0067C24D /* Debug */,
+				0325023E3028AE1C0067C24D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		03AFC12A2E80AA8300F106C8 /* Build configuration list for PBXProject "YekkyOhneLekky" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
