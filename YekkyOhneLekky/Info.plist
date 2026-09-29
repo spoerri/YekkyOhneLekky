@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>YekkyOhneLekky.refresh</string>
+	</array>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Set alarms for yom tov and shabbat</string>
 	<key>OSLogPreferences</key>
 	<dict>
 		<key>org.spoer.YekkyOhneLekky</key>
@@ -10,24 +16,16 @@
 			<dict>
 				<key>Enable</key>
 				<string>Info</string>
-				<key>Persist</key>
-				<string>Info</string>
 				<key>Enable-Private-Data</key>
 				<true/>
+				<key>Persist</key>
+				<string>Info</string>
 			</dict>
 		</dict>
 	</dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>YekkyOhneLekky.refresh</string>
-	</array>
-	<key>NSAlarmKitUsageDescription</key>
-	<string>Set alarms for yom tov and shabbat</string>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>processing</string>
+		<string>fetch</string>
 	</array>
 </dict>
 </plist>

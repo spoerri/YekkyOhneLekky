@@ -36,7 +36,10 @@ struct AlarmDetailsView: View {
                                 let start = Calendar.current.startOfDay(for: nextDayToFire)
                                 let stop = start + TimeInterval(60*60*24)
                                 if let existingAlarm = try? modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> {start <= $0.nextDayToFire && $0.nextDayToFire < stop && $0.name != alarmName && !$0.isOverridden})).first {
-                                    selectedTime = EditAlarmView.getTime(Calendar.current, existingAlarm)
+                                    let overriddenTime = EditAlarmView.getTime(Calendar.current, existingAlarm)
+                                    if overriddenTime > Date() {
+                                        selectedTime = overriddenTime
+                                    }
                                 }
                             }
                         }

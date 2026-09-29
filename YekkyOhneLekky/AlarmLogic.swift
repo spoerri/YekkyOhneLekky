@@ -202,7 +202,9 @@ class AlarmLogic {
             try await unoverride(now, modelContext, originalDayToFire)
         }
         
+        await scheduleNext(now, modelContext)
         try modelContext.save()
+        printScheduledAlarms()
     }
     
     private static func saveOtherAlarmsInGroup(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
@@ -383,14 +385,16 @@ class AlarmLogic {
             alarm.maybeDayToFire = try getNextDayToFire(now, alarm)
             alarm.nextDayToFire = alarm.maybeDayToFire
             try modelContext.save()
-        } else if try isFullyScheduled(alarm) {
+        } else if try alarm.ids.isEmpty || isFullyScheduled(alarm) {
+            //not due yet: either waiting its turn (scheduleNext will pick it up), or already handed to AlarmKit intact
             return;
         }
         
         await schedule(now, modelContext, alarm)
     }
     
-    //TODO pull the AlarmKit stuff out to make unit testing easier?
+    //Prepares the alarm (unschedules it, works out overrides) but doesn't hand it to AlarmKit.
+    //That happens only in scheduleNext, which schedules a single AlarmModel at a time.
     private class func schedule(_ now: Date, _ modelContext: ModelContext, _ alarm: AlarmModel) async {
         //AlarmLogger.shared.notice("Perhaps scheduling \(alarm.name): \(alarm.nextDayToFire)")
         do {
@@ -402,74 +406,109 @@ class AlarmLogic {
             }
             
             try overrideAsAppropriate(now, modelContext, alarm)
-            if alarm.isOverridden {
-                return
-            }
-            
-            //AlarmLogger.shared.notice("not overridden")
-            
-            let alertPresentation = AlarmPresentation.Alert(
-                title: getSalutation(alarm: alarm),
-            )
-            
-            let presentation = AlarmPresentation(
-                alert: alertPresentation
-            )
-            
-            let attributes = AlarmAttributes(
-                presentation: presentation,
-                metadata: EmptyMetadata(),
-                tintColor: .black
-            )
-            
-            let soundConfig: AlertConfiguration.AlertSound
-            if let selectedSoundName = alarm.selectedSound {
-                // Verify the sound file exists
-                if let _ = Bundle.main.url(forResource: selectedSoundName, withExtension: "mp3") {
-                    soundConfig = AlertConfiguration.AlertSound.named(selectedSoundName+".mp3")
-                } else {
-                    soundConfig = .default
-                    AlarmLogger.shared.info("Custom sound \(selectedSoundName).mp3 not found in bundle, using default")
-                }
-            } else {
-                soundConfig = .default
-            }
-            //AlarmLogger.shared.info("Using sound: \(soundConfig)")
-            
-            var date = try alarm.getAlarmDateAndTime(now)
-            
-            if date < now {
-                return
-            }
-            
-            //AlarmLogger.shared.notice("not in the past") //TODO debug
-            
-            let repetitions = alarm.repetitions > 0 ? "x"+String(describing:alarm.repetitions+1) : ""
-            let name = alarm.name.count > 13 ? alarm.name.prefix(13) + "…" : alarm.name
-            AlarmLogger.shared.info("sched \(name): \(date.formatted()) \(repetitions)")
-            
-            for i in 0...alarm.repetitions {
-                let uuid = UUID()
-                alarm.ids.append(uuid)
-                try await scheduleAlarm(now, id: uuid, date: date, soundConfig: soundConfig, attributes: attributes)
-                if let duration = alarm.duration {
-                    date.addTimeInterval(duration)
-                    let uuid = UUID()
-                    alarm.ids.append(uuid)
-                    try await scheduleAlarm(now, id: uuid, date: date, soundConfig: AlertConfiguration.AlertSound.named("silence.mp3"), attributes: attributes)
-                    date.addTimeInterval(alarm.repetitionDelay)
-                }
-            }
         } catch {
             AlarmLogger.shared.error("\(now) Error scheduling alarm: \(error)")
+        }
+    }
+    
+    //Hands AlarmKit only a single AlarmModel at a time: the earliest enabled, non-overridden one that hasn't fired yet.
+    //While that one's time is still in the future, nothing else is scheduled. Once its time has passed, the next call
+    //(from its stopIntent, the background refresh, or opening the app) schedules the one after it.
+    public class func scheduleNext(_ now: Date, _ modelContext: ModelContext) async {
+        do {
+            let all = try modelContext.fetch(FetchDescriptor<AlarmModel>())
+            
+            var upcoming: [(alarm: AlarmModel, date: Date)] = []
+            for alarm in all where alarm.isEnabled && !alarm.isOverridden {
+                let date = try alarm.getAlarmDateAndTime()
+                if date >= now {
+                    upcoming.append((alarm, date))
+                }
+            }
+            let next = upcoming.min(by: { $0.date < $1.date })?.alarm
+            
+            //anything else that's scheduled and hasn't fired yet comes out, e.g. when an earlier alarm was just saved,
+            //or left over from when every alarm was scheduled at once.
+            //alarms whose time already passed are left alone, so their repetitions still ring.
+            for alarm in all where !alarm.ids.isEmpty && alarm != next {
+                if try alarm.getAlarmDateAndTime() >= now {
+                    try alarm.unschedule()
+                }
+            }
+            
+            guard let next = next else {
+                return
+            }
+            if !next.ids.isEmpty {
+                if try isFullyScheduled(next) {
+                    return //already scheduled; wait for its time to pass
+                }
+                try next.unschedule() //AlarmKit lost some of it, so start over
+            }
+            try await arm(now, next)
+            try modelContext.save()
+        } catch {
+            AlarmLogger.shared.error("\(now) Error scheduling next alarm: \(error)")
+        }
+    }
+    
+    //TODO pull the AlarmKit stuff out to make unit testing easier?
+    private class func arm(_ now: Date, _ alarm: AlarmModel) async throws {
+        let alertPresentation = AlarmPresentation.Alert(
+            title: getSalutation(alarm: alarm),
+        )
+        
+        let presentation = AlarmPresentation(
+            alert: alertPresentation
+        )
+        
+        let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: EmptyMetadata(),
+            tintColor: .black
+        )
+        
+        let soundConfig: AlertConfiguration.AlertSound
+        if let selectedSoundName = alarm.selectedSound {
+            // Verify the sound file exists
+            if let _ = Bundle.main.url(forResource: selectedSoundName, withExtension: "mp3") {
+                soundConfig = AlertConfiguration.AlertSound.named(selectedSoundName+".mp3")
+            } else {
+                soundConfig = .default
+                AlarmLogger.shared.info("Custom sound \(selectedSoundName).mp3 not found in bundle, using default")
+            }
+        } else {
+            soundConfig = .default
+        }
+        //AlarmLogger.shared.info("Using sound: \(soundConfig)")
+        
+        var date = try alarm.getAlarmDateAndTime()
+        
+        let repetitions = alarm.repetitions > 0 ? "x"+String(describing:alarm.repetitions+1) : ""
+        let name = alarm.name.count > 13 ? alarm.name.prefix(13) + "…" : alarm.name
+        AlarmLogger.shared.info("sched \(name): \(date.formatted()) \(repetitions)")
+        
+        for _ in 0...alarm.repetitions {
+            let uuid = UUID()
+            alarm.ids.append(uuid)
+            try await scheduleAlarm(now, id: uuid, date: date, soundConfig: soundConfig, attributes: attributes)
+            if let duration = alarm.duration {
+                date.addTimeInterval(duration)
+                let uuid = UUID()
+                alarm.ids.append(uuid)
+                try await scheduleAlarm(now, id: uuid, date: date, soundConfig: AlertConfiguration.AlertSound.named("silence.mp3"), attributes: attributes)
+                date.addTimeInterval(alarm.repetitionDelay)
+            }
         }
     }
     
     public class func isFullyScheduled(_ alarm: AlarmModel) throws -> Bool {
         let scheduled = try Manager.alarms.map { $0.id }
         let unscheduled_count = Set(alarm.ids).subtracting(scheduled).count
-        if unscheduled_count != alarm.ids.count { AlarmLogger.shared.info("partially unscheduled! i.e. \(unscheduled_count)") }
-        return scheduled.count > 0 && unscheduled_count == 0
+        if alarm.ids.count > unscheduled_count && unscheduled_count > 0 {
+            AlarmLogger.shared.info("partially unscheduled! i.e. \(unscheduled_count)")
+        }
+        return alarm.ids.count > 0 && unscheduled_count == 0
     }
     
     struct EmptyMetadata : AlarmMetadata {
@@ -542,6 +581,7 @@ class AlarmLogic {
             modelContext.delete(alarm)
         }
         
+        await scheduleNext(now, modelContext)
         printScheduledAlarms()
         
         do {

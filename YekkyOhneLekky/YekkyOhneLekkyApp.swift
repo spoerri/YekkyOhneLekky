@@ -16,7 +16,6 @@ struct YekkyOhneLekkyApp: App {
     @Environment(\.scenePhase) private var phase
     @State private var showAlert = false
     let container: ModelContainer
-    let bgTaskIdentifier = "YekkyOhneLekky.refresh"
     let alarmActor: AlarmActor
     
     init() {
@@ -40,61 +39,59 @@ struct YekkyOhneLekkyApp: App {
         AlarmLogger.shared.modelContext = container.mainContext
         let alarmActorCopy = alarmActor
         AppDependencyManager.shared.add { alarmActorCopy }
-        
-        if false {
-            Task {
-                for await scheduled in AlarmManager.shared.alarmUpdates {
-                    //                AlarmLogger.shared.info("alarmUpdates: \(scheduled.map(\.schedule))")
-                    let scheduledIDs = scheduled.map(\.id)
-                    let context = try ModelContainer(for: AlarmModel.self, AlarmLogger.AlarmLog.self).mainContext
-                    var configedNotSchedule = Set<Date>()
-                    var configedIDs = Set<UUID>()
-                    for configured in try context.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { !$0.ids.isEmpty })) {
-                        try configured.ids.filter { !scheduledIDs.contains($0) }.forEach { _ in configedNotSchedule.insert(try configured.getAlarmDateAndTime()) }
-                        configedIDs = configedIDs.union(configured.ids)
-                    }
-                    if !configedNotSchedule.isEmpty {
-                        AlarmLogger.shared.error("Alarm not scheduled \(configedNotSchedule)")
-                    }
-                    let scheduledNotConfiged = scheduled.filter { !configedIDs.contains($0.id) }
-                    if !scheduledNotConfiged.isEmpty {
-                        AlarmLogger.shared.error("Unknown alarms scheduled \(scheduledNotConfiged)")
-                    }
-                    
-                }
-            }
-        }
-    }
-    
-    nonisolated func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: bgTaskIdentifier)
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 6 * 60 * 60) //if the phone is entirely off when an alarm was supposed to ring, perhaps this will handle it, assuming the phone is turned on at least six hours before the next alarm in that categorys should ring
-        do {
-            try BGTaskScheduler.shared.submit(request)
-        } catch {
-            AlarmLogger.shared.error("Could not submit bg task request: \(String(describing: error))")
-        }
     }
     
     var body: some Scene {
         WindowGroup {
             ContentView(showAlert: $showAlert)
+                .task(id: phase) {
+//                    AlarmLogger.shared.info("foreground task")
+                    guard phase == .active else { return }
+                    BackgroundRefresh.submit()
+                    while !Task.isCancelled {
+                        do {
+                            try await alarmActor.scheduleNextAlarms()
+                        } catch {
+                            AlarmLogger.shared.error("scheduleNextAlarms failed: \(String(describing: error))")
+                        }
+                        try? await Task.sleep(for: BackgroundRefresh.interval)
+                    }
+                }
         }
         .modelContainer(container)
-        .onChange(of: phase) { newPhase, arg in //TODO need to care about arg?
-            switch newPhase {
-                case .background: scheduleAppRefresh()
-                default: break
+        .onChange(of: phase) { _, newPhase in
+//            AlarmLogger.shared.info("onChange of phase to \(newPhase)")
+            if newPhase == .background {
+                BackgroundRefresh.submit()
             }
         }
-        .backgroundTask(.appRefresh(bgTaskIdentifier)) { @Sendable context in
+        .backgroundTask(.appRefresh(BackgroundRefresh.identifier)) {
+            BackgroundRefresh.submit() //request the next run first, so the chain continues even if iOS cuts this one short
+            AlarmLogger.shared.info("background task")
             do {
-                scheduleAppRefresh()
-                AlarmLogger.shared.info("backgroundTask")
                 try await alarmActor.scheduleNextAlarms()
             } catch {
-                AlarmLogger.shared.error("backgroundTask failed: \(String(describing: error))")
+                AlarmLogger.shared.error("scheduleNextAlarms failed: \(String(describing: error))")
             }
+        }
+    }
+}
+
+enum BackgroundRefresh {
+    nonisolated static let identifier = "YekkyOhneLekky.refresh"
+    nonisolated static let interval = Duration.seconds(60 * 60)
+    
+    //replaces any pending request with the same identifier
+    nonisolated static func submit() {
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: interval  / .seconds(1))
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            BGTaskScheduler.shared.getPendingTaskRequests { pending in
+                AlarmLogger.shared.info("bg pending: " + pending.map { "\($0.identifier) after \($0.earliestBeginDate?.formatted(date: .omitted, time: .shortened) ?? "?")" }.joined(separator: ", "))
+            }
+        } catch {
+            AlarmLogger.shared.error("Could not submit bg task request: \(String(describing: error))")
         }
     }
 }

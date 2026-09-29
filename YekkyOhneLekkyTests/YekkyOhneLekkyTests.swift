@@ -50,7 +50,9 @@ struct YekkyOhneLekkyTests {
     @Test func example() async throws {
         let now = ISO8601DateFormatter().date(from:"2026-08-02T13:00:00Z")!
         let alarm = AlarmModel(name: "weekdays", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Monday"]), hour:8, minute:0, maybeDayToFire: now, nextDayToFire: now, duration: nil, repetitions: 0)
+        context.insert(alarm)
         try await AlarmLogic.reschedule(now, context, alarm)
+        await AlarmLogic.scheduleNext(now, context)
         print(mock.scheduled)
         #expect(mock.scheduled.values.elementsEqual([ISO8601DateFormatter().date(from:"2026-08-03T12:00:00Z")!]))
     }
@@ -84,7 +86,38 @@ struct YekkyOhneLekkyTests {
         
         try await AlarmLogic.reschedule(at(8, 0, on: wednesday), context, weekdayAlarm)
         try await AlarmLogic.reschedule(at(8, 0, on: wednesday), context, roshChodeshAlarm)
-        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 30, on: thursday), at(7, 15, on: nextRoshChodesh)]))
+        await AlarmLogic.scheduleNext(at(8, 0, on: wednesday), context)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 30, on: thursday)])) //rosh chodesh waits its turn
+        #expect(try roshChodeshAlarm.getAlarmDateAndTime() == at(7, 15, on: nextRoshChodesh))
+    }
+    
+    @Test func onlyOneAlarmModelScheduledAtATime() async throws {
+        let monday = ISO8601DateFormatter().date(from:"2026-08-03T05:00:00Z")!
+        let tuesday = Calendar.current.date(byAdding: .day, value: 1, to: monday)!
+        let wednesday = Calendar.current.date(byAdding: .day, value: 1, to: tuesday)!
+        let first = AlarmModel(name: "first", alarmType: .explicit, hour: 7, minute: 0, maybeDayToFire: tuesday, nextDayToFire: tuesday, duration: nil, repetitions: 0)
+        let second = AlarmModel(name: "second", alarmType: .explicit, hour: 7, minute: 0, maybeDayToFire: wednesday, nextDayToFire: wednesday, duration: nil, repetitions: 0)
+        context.insert(first)
+        context.insert(second)
+        
+        await AlarmLogic.scheduleNext(monday, context)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday)]))
+        
+        //the first one's time isn't past yet, so nothing more gets scheduled
+        await AlarmLogic.scheduleNext(at(6, 59, on: tuesday), context)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday)]))
+        #expect(second.ids.isEmpty)
+        
+        //once it's past, the next one is scheduled (the first is left alone in case it's still ringing)
+        await AlarmLogic.scheduleNext(at(7, 1, on: tuesday), context)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday), at(7, 0, on: wednesday)]))
+        
+        //an earlier alarm added later replaces the one that's waiting
+        let earlier = AlarmModel(name: "earlier", alarmType: .explicit, hour: 9, minute: 0, maybeDayToFire: tuesday, nextDayToFire: tuesday, duration: nil, repetitions: 0)
+        context.insert(earlier)
+        await AlarmLogic.scheduleNext(at(8, 0, on: tuesday), context)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday), at(9, 0, on: tuesday)]))
+        #expect(second.ids.isEmpty)
     }
         
     func at(_ hour: Int, _ minute: Int, on: Date) -> Date {
