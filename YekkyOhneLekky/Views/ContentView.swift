@@ -40,9 +40,9 @@ YekkyOhneLekky can even relieve you of turning off your regular weekday alarms b
 
 Yekky should be smart about multiple alarms occurring on the same morning; it prefers the sensible one. “One off”s beat yom tov, yom tov beats shabbos, shabbos beats national holidays, national holidays beat rosh chodesh, and rosh chodesh beats weekdays (e.g. Tuesday). (Fasts and chol hamoed have the same precedence as rosh chodesh. Sundays have the same precedence as national holidays.) The simple explanation is that on “work days”, shacharis is often scheduled to enable people to get to work on time.
 
-To ring alarms for different times on the same day, use the "Just Once" row for now, and select "Extra (e.g. for a nap). Currently there is no support for recurring different alarms on the same day, so you have to manually set them each week if desired.
+To ring more than one alarm on a day, use the "Just Once" row, and select "Extra (e.g. for a nap). Currently there is no support for multiple recurring alarms on the same day, so you have to manually set them each week if desired.
 
-If you want Yekky to ring two or more unrelated alarms before the next time you can dismiss the alarm, make sure: Yekky is running (at least in the background) and your phone will not be in power save mode (between the alarms). In addition to cases like a "two day yom tov", and confirming both a morning and afternoon alarm, make sure to start Yekky if it should have rung an alarm while your phone was powered off.
+If you want Yekky to ring more than one independent alarm before you touch your phone, make sure that Yekky is running (at least in the background) and that your phone will not power save (between the alarms). This includes cases like a "two day yom tov" and using an Extra alarm. If your phone was powered off when an alarm should've rung, make sure to start Yekky when you turn it back on.
 
 You can [visit our FAQ on the web](https://www.yekky.spoer.org/home/faq) for more info.
 

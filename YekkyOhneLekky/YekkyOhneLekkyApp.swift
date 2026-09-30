@@ -47,7 +47,6 @@ struct YekkyOhneLekkyApp: App {
                 .task(id: phase) {
 //                    AlarmLogger.shared.info("foreground task")
                     guard phase == .active else { return }
-                    BackgroundRefresh.submit()
                     while !Task.isCancelled {
                         do {
                             try await alarmActor.scheduleNextAlarms()
@@ -60,14 +59,13 @@ struct YekkyOhneLekkyApp: App {
         }
         .modelContainer(container)
         .onChange(of: phase) { _, newPhase in
-//            AlarmLogger.shared.info("onChange of phase to \(newPhase)")
             if newPhase == .background {
                 BackgroundRefresh.submit()
             }
         }
         .backgroundTask(.appRefresh(BackgroundRefresh.identifier)) {
             BackgroundRefresh.submit() //request the next run first, so the chain continues even if iOS cuts this one short
-            AlarmLogger.shared.info("background task")
+            AlarmLogger.shared.info("running background task")
             do {
                 try await alarmActor.scheduleNextAlarms()
             } catch {
@@ -81,7 +79,6 @@ enum BackgroundRefresh {
     nonisolated static let identifier = "YekkyOhneLekky.refresh"
     nonisolated static let interval = Duration.seconds(60 * 60)
     
-    //replaces any pending request with the same identifier
     nonisolated static func submit() {
         let request = BGAppRefreshTaskRequest(identifier: identifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: interval  / .seconds(1))

@@ -10,60 +10,33 @@ struct EditAlarmView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
-    let editingAlarm: AlarmModel?
+    let editingAlarm: AlarmModel
     
-    //TODO reduce boilerplate?
-    @State private var alarmName = ""
-    @State private var alarmType = AlarmType.explicit
-    @State private var selectedTime = Testable.Date()
+    @State private var alarmName: String
+    @State private var alarmType: AlarmType
+    @State private var selectedTime: Date
     @State private var duration: TimeInterval?
-    @State private var repetitions: Int = -1
-    @State private var repetitionDelay: TimeInterval = -1
-    @State private var isEnabled: Bool = true
-    @State private var isOverridden: Bool = true
-    @State private var isExtra: Bool = false
-    @State private var isGrouped: Bool = true
-    @State private var maybeDayToFire: Date = Testable.Date()
-    @State private var nextDayToFire: Date = Testable.Date()
-    @State private var daysOfWeek = Set<String>()
-    @State private var showPermissionsDeniedAlert = false
+    @State private var repetitions: Int
+    @State private var repetitionDelay: TimeInterval
+    @State private var isEnabled: Bool
+    @State private var isOverridden: Bool
+    @State private var isExtra: Bool
+    @State private var isGrouped: Bool
+    @State private var maybeDayToFire: Date
+    @State private var nextDayToFire: Date
+    @State private var daysOfWeek: Set<String>
     @State private var selectedSound: String?
     
-    init(editingAlarm: AlarmModel? = nil) {
-        self.editingAlarm = editingAlarm
-    }
+    @State private var showPermissionsDeniedAlert = false
     
     var body: some View {
         NavigationStack {
             Form {
-                AlarmDetailsView(
-                    alarmName: $alarmName,
-                    alarmType: $alarmType,
-                    selectedTime: $selectedTime,
-                    duration: $duration,
-                    repetitions: $repetitions,
-                    repetitionDelay: $repetitionDelay,
-                    isEnabled: $isEnabled,
-                    isOverridden: $isOverridden,
-                    isExtra: $isExtra,
-                    isGrouped: $isGrouped,
-                    maybeDayToFire: $maybeDayToFire,
-                    nextDayToFire: $nextDayToFire,
-                    daysOfWeek: $daysOfWeek
-                )
+                detailsSection
                 SoundSelectionView(selectedSound: $selectedSound)
             }
             .navigationTitle(alarmType == .explicit ? (alarmName == AlarmLogic.Once && !isEnabled ? "One off template" : "One off alarm") : alarmType == .weekDay ? "Weekly alarms" : alarmName)
             .navigationBarTitleDisplayMode(.inline)
-            .onTapGesture {
-            }
-            .onAppear {
-                do {
-                    try loadAlarmData()
-                } catch {
-                    AlarmLogger.shared.error("Could not load alarm data") //TODO dialog
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -87,65 +60,180 @@ struct EditAlarmView: View {
         }
     }
     
-    static func getTime(_ calendar: Calendar, _ alarm: AlarmModel) -> Date {
-        return calendar.date(bySettingHour: alarm.hour, minute: alarm.minute, second: 0, of: Testable.Date()) ?? Testable.Date()
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }
+
+    @ViewBuilder
+    private var detailsSection: some View {
+        Section(header: Text("Alarm Details")) {
+            if alarmName != AlarmLogic.Once || isEnabled {
+                if alarmName == AlarmLogic.Once || alarmType == .explicit {
+                    let datePickerInterceptor = Binding<Date>(
+                        get: { nextDayToFire },
+                        set: {
+                            nextDayToFire = $0
+                            //default to the time of the alarm to be overridden
+                            if alarmName == AlarmLogic.Once {
+                                let start = Calendar.current.startOfDay(for: nextDayToFire)
+                                let stop = start + TimeInterval(60*60*24)
+                                if let existingAlarm = try? modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> {start <= $0.nextDayToFire && $0.nextDayToFire < stop && $0.name != alarmName && !$0.isOverridden})).first {
+                                    if !Calendar.current.isDate(existingAlarm.nextDayToFire, inSameDayAs: Testable.Date()) {
+                                        do {
+                                            selectedTime = try existingAlarm.getAlarmDateAndTime()
+                                        } catch {
+                                            AlarmLogger.shared.error("Error getting time of alarm: \(error)")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )
+                    DatePicker("Date", selection: datePickerInterceptor, displayedComponents: .date)
+                } else {
+                    HStack {
+                        Text("Next date:")
+                        Text(maybeDayToFire, formatter: dateFormatter)
+                            .strikethrough(isOverridden).frame(maxWidth: .infinity, alignment: .trailing)
+                        //TODO show the nextDayToFire (not strikethrough) if maybeDayToFire is overridden
+                        //TODO be clever about two day rosh chodesh?
+                    }
+                }
+            }
+            if let groupLabel = AlarmLogic.groupLabel[alarmType] {
+                if alarmName != AlarmLogic.Once || isEnabled { //the one-off template isn't grouped with the actual one-offs
+                    Toggle("Configured with other "+groupLabel, isOn: $isGrouped)
+                }
+            }
+            if alarmName != AlarmLogic.Once || isEnabled {
+                DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
+            }
+            if alarmType == .explicit {
+                Toggle("Extra (e.g. for a nap)", isOn: $isExtra)
+            }
+            Toggle("Enabled", isOn: $isEnabled)
+                .onChange(of: isEnabled, initial: true) {
+                    if alarmName == AlarmLogic.Once {
+                        isGrouped = isEnabled
+                    }
+                }
+            Picker("Duration", selection: $duration) {
+                Text("30 seconds").tag(TimeInterval(30))
+                Text("1 minute").tag(TimeInterval(60))
+                Text("2 minutes").tag(TimeInterval(120))
+                Text("4 minutes").tag(TimeInterval(240))
+                Text("8 minutes").tag(TimeInterval(480))
+                Text("15 minutes").tag(nil as TimeInterval?)
+            }.pickerStyle(.menu)
+            Picker("Repetitions", selection: $repetitions) {
+                ForEach(0..<10) { n in
+                    Text("^[\(n) extra times](inflect: true)").tag(n)
+                }
+            }.pickerStyle(.menu)
+                .onChange(of: repetitions) {
+                    if repetitions > 0 && duration == nil {
+                        duration = TimeInterval(60)
+                    }
+                }
+            Picker("Repetition delay", selection: $repetitionDelay) {
+                Text("30 seconds").tag(TimeInterval(30))
+                Text("1 minute").tag(TimeInterval(60))
+                Text("2 minutes").tag(TimeInterval(120))
+                Text("4 minutes").tag(TimeInterval(240))
+                Text("8 minutes").tag(TimeInterval(480))
+                Text("15 minutes").tag(TimeInterval(900))
+            }.pickerStyle(.menu).disabled(repetitions == 0)
+            if alarmType == .weekDay {
+                HStack(spacing: 14) {
+                    ForEach(0..<AlarmLogic.allDaysOfWeek.count, id: \.self) { day in
+                        Button(action: {
+                            if daysOfWeek.contains(AlarmLogic.allDaysOfWeek[day]) {
+                                daysOfWeek.remove(AlarmLogic.allDaysOfWeek[day])
+                            } else {
+                                daysOfWeek.insert(AlarmLogic.allDaysOfWeek[day])
+                            }
+                        }) {
+                            Text(Calendar.current.veryShortWeekdaySymbols[day])
+                                .fontWeight(.bold)
+                                .frame(width: 36, height: 36)
+                                .foregroundColor(daysOfWeek.contains(AlarmLogic.allDaysOfWeek[day]) ? .white : .primary)
+                                .background(daysOfWeek.contains(AlarmLogic.allDaysOfWeek[day]) ? Color.accentColor : Color(.systemGray5))
+                                .clipShape(Circle())
+                        }
+                        .disabled(AlarmLogic.allDaysOfWeek[day] == AlarmLogic.Saturday)
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+        }
     }
     
-    private func loadAlarmData() throws {
-        guard let alarm = editingAlarm else { return }
+    init(editingAlarm: AlarmModel) {
+        self.editingAlarm = editingAlarm
         
-        alarmName = alarm.name
-        alarmType = alarm.alarmType
-        selectedSound = alarm.selectedSound
-        isEnabled = alarm.isEnabled
-        isOverridden = alarm.isOverridden
-        isExtra = alarm.isExtra
-        isGrouped = alarm.isGrouped
-        daysOfWeek = alarm.daysOfWeek
+        alarmName = editingAlarm.name
+        alarmType = editingAlarm.alarmType
+        selectedSound = editingAlarm.selectedSound
+        isEnabled = editingAlarm.isEnabled
+        isOverridden = editingAlarm.isOverridden
+        isExtra = editingAlarm.isExtra
+        isGrouped = editingAlarm.isGrouped
+        daysOfWeek = editingAlarm.daysOfWeek
         
-        let calendar = Calendar.current
-        if alarmName == AlarmLogic.Once {
-            alarm.hour = calendar.component(.hour, from: Testable.Date())
-            alarm.minute = calendar.component(.minute, from: Testable.Date()) + 1
+        if editingAlarm.name == AlarmLogic.Once {
+            selectedTime = Calendar.current.date(byAdding: .minute, value:1, to: Testable.Date())!
             isEnabled = true
             isExtra = false
+        } else {
+            do {
+                selectedTime = try editingAlarm.getAlarmDateAndTime()
+            } catch {
+                selectedTime = Testable.Date()
+                AlarmLogger.shared.error("Error editing alarm: \(error)")
+            }
         }
-        selectedTime = EditAlarmView.getTime(calendar, alarm)
-        duration = alarm.duration
-        repetitions = alarm.repetitions
-        repetitionDelay = alarm.repetitionDelay
-        maybeDayToFire = try AlarmLogic.getNextDayToFire(Testable.Date(), alarm)
-        nextDayToFire = maybeDayToFire
+        duration = editingAlarm.duration
+        repetitions = editingAlarm.repetitions
+        repetitionDelay = editingAlarm.repetitionDelay
+        let day: Date
+        do {
+            day = try AlarmLogic.getNextDayToFire(Testable.Date(), editingAlarm)
+        } catch {
+            day = Testable.Date()
+            AlarmLogger.shared.error("Error editing alarm: \(error)")
+        }
+        maybeDayToFire = day
+        nextDayToFire = day
     }
     
     @MainActor
     private func saveAlarm() async {
         do {
             try await requestAlarmAuthorization()
-            
-            if let editingAlarm = editingAlarm {
-                let originalDayToFire = (editingAlarm.isEnabled && !isEnabled)
-                    || (!editingAlarm.isExtra && isExtra)
-                    || editingAlarm.nextDayToFire != nextDayToFire
-                    ? editingAlarm.nextDayToFire : nil
-                let originalDaysOfWeek = editingAlarm.daysOfWeek
-                editingAlarm.daysOfWeek = daysOfWeek
-                editingAlarm.isEnabled = isEnabled
-                editingAlarm.isOverridden = isOverridden
-                editingAlarm.isExtra = isExtra
-                editingAlarm.isGrouped = isGrouped
-                editingAlarm.selectedSound = selectedSound
-                editingAlarm.duration = duration
-                editingAlarm.repetitions = repetitions
-                editingAlarm.repetitionDelay = repetitionDelay
-                editingAlarm.hour = Calendar.current.component(.hour, from: selectedTime)
-                editingAlarm.minute = Calendar.current.component(.minute, from: selectedTime)
-                editingAlarm.maybeDayToFire = maybeDayToFire
-                editingAlarm.nextDayToFire = nextDayToFire
-                AlarmLogger.shared.info("saveAlarm: \(editingAlarm.name)")
-                //TODO should actually not save any changes if there's an exception in AlarmLogic
-                try await AlarmLogic.saveAlarm(Testable.Date(), modelContext, editingAlarm, originalDaysOfWeek, originalDayToFire)
-            }
+            let originalDayToFire = (editingAlarm.isEnabled && !isEnabled)
+                || (!editingAlarm.isExtra && isExtra)
+                || editingAlarm.nextDayToFire != nextDayToFire
+                ? editingAlarm.nextDayToFire : nil
+            let originalDaysOfWeek = editingAlarm.daysOfWeek
+            editingAlarm.daysOfWeek = daysOfWeek
+            editingAlarm.isEnabled = isEnabled
+            editingAlarm.isOverridden = isOverridden
+            editingAlarm.isExtra = isExtra
+            editingAlarm.isGrouped = isGrouped
+            editingAlarm.selectedSound = selectedSound
+            editingAlarm.duration = duration
+            editingAlarm.repetitions = repetitions
+            editingAlarm.repetitionDelay = repetitionDelay
+            editingAlarm.hour = Calendar.current.component(.hour, from: selectedTime)
+            editingAlarm.minute = Calendar.current.component(.minute, from: selectedTime)
+            editingAlarm.maybeDayToFire = maybeDayToFire
+            editingAlarm.nextDayToFire = nextDayToFire
+            AlarmLogger.shared.info("saveAlarm: \(editingAlarm.name)")
+            //TODO should actually not save any changes if there's an exception in AlarmLogic
+            try await AlarmLogic.saveAlarm(Testable.Date(), modelContext, editingAlarm, originalDaysOfWeek, originalDayToFire)
             dismiss()
         } catch {
             AlarmLogger.shared.error("Error saving alarm: \(error)")
@@ -172,6 +260,7 @@ struct EditAlarmView: View {
 }
 
 #Preview {
-    EditAlarmView()
+    @Previewable @State var value = AlarmModel(name: "Preview Alarm", alarmType: AlarmType.explicit, hour: 8, minute: 0, maybeDayToFire: Date(), nextDayToFire: Date())
+    EditAlarmView(editingAlarm: value)
         .modelContainer(for: AlarmModel.self, inMemory: true)
 }

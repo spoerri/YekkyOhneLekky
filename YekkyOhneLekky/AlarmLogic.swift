@@ -453,7 +453,6 @@ class AlarmLogic {
         }
     }
     
-    //TODO pull the AlarmKit stuff out to make unit testing easier?
     private class func arm(_ now: Date, _ alarm: AlarmModel) async throws {
         let alertPresentation = AlarmPresentation.Alert(
             title: getSalutation(alarm: alarm),
@@ -484,7 +483,6 @@ class AlarmLogic {
         //AlarmLogger.shared.info("Using sound: \(soundConfig)")
         
         var date = try alarm.getAlarmDateAndTime()
-        
         let repetitions = alarm.repetitions > 0 ? "x"+String(describing:alarm.repetitions+1) : ""
         let name = alarm.name.count > 13 ? alarm.name.prefix(13) + "…" : alarm.name
         AlarmLogger.shared.info("sched \(name): \(date.formatted()) \(repetitions)")
@@ -552,8 +550,8 @@ class AlarmLogic {
         try Manager.alarms.forEach{try Manager.cancel(id: $0.id )}
         
         let chagim = getChagim(now)
-        let chagimDescription = chagim.map{$0.desc}
-        //AlarmLogger.shared.info("Chagim \(chagimDescription)")
+//        let chagimDescription = chagim.map{$0.desc}
+//        AlarmLogger.shared.info("Chagim \(chagimDescription)")
         
         try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: CholHamoed, nextDayToFire: chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!.hdate.greg(), alarmType: .cholHamoed)
         try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: RoshChodesh, nextDayToFire: chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!.hdate.greg(), alarmType: .roshChodesh)

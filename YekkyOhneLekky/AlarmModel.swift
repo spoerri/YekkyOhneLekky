@@ -11,7 +11,6 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
-    //TODO use date components or strings for these? be sure of daylight savings
     var maybeDayToFire: Date //note that this may or may not have the alarm time in it
     var nextDayToFire: Date //note that this may or may not have the alarm time in it
     var isEnabled: Bool
@@ -81,7 +80,7 @@ class AlarmModel {
     }
     
     func getAlarmDateAndTime(_ date: Date) throws -> Date {
-        guard let fullDate = Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: nextDayToFire) else { throw AlarmError.ugh }
+        guard let fullDate = Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: date) else { throw AlarmError.ugh }
         return fullDate
     }
     
