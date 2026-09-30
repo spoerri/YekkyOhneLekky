@@ -119,6 +119,30 @@ struct YekkyOhneLekkyTests {
         #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday), at(9, 0, on: tuesday)]))
         #expect(second.ids.isEmpty)
     }
+
+    @Test func disablingOverrideRestoresOverriddenAlarm() async throws {
+        let sunday = ISO8601DateFormatter().date(from:"2026-08-02T16:00:00Z")! //sunday afternoon, so the day after is already past 9am
+        let monday = Calendar.current.date(byAdding: .day, value: 1, to: sunday)!
+        
+        let weekdayAlarm = AlarmModel(name: "Monday", alarmType: .weekDay, daysOfWeek: Set(["Monday"]), hour: 9, minute: 0, maybeDayToFire: sunday, nextDayToFire: sunday, duration: nil, repetitions: 0)
+        context.insert(weekdayAlarm)
+        try await AlarmLogic.saveAlarm(sunday, context, weekdayAlarm, Set(["Monday"]), nil)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(9, 0, on: monday)]))
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let override = AlarmModel(name: dateFormatter.string(from: monday), alarmType: .explicit, hour: 10, minute: 0, maybeDayToFire: monday, nextDayToFire: monday, duration: nil, repetitions: 0)
+        context.insert(override)
+        try await AlarmLogic.saveAlarm(sunday, context, override, Set(), nil)
+        #expect(weekdayAlarm.isOverridden)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(10, 0, on: monday)]))
+        
+        let originalDayToFire = override.nextDayToFire //as EditAlarmView passes it when disabling
+        override.isEnabled = false
+        try await AlarmLogic.saveAlarm(sunday, context, override, Set(), originalDayToFire)
+        #expect(!weekdayAlarm.isOverridden)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(9, 0, on: monday)]))
+    }
         
     func at(_ hour: Int, _ minute: Int, on: Date) -> Date {
         return Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: on)!

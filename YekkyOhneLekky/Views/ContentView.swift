@@ -42,7 +42,7 @@ Yekky should be smart about multiple alarms occurring on the same morning; it pr
 
 To ring alarms for different times on the same day, use the "Just Once" row for now, and select "Extra (e.g. for a nap). Currently there is no support for recurring different alarms on the same day, so you have to manually set them each week if desired.
 
-If you want Yekky to ring two separate alarms before the next time you can dismiss the alarm, make sure: Yekky is running (at least in the background) and your phone is not in power save mode. In addition to cases like a "two day yom tov" and confirming both a morning and afternoon alarm, make sure to start Yekky if it should have rung an alarm while your phone was powered off.
+If you want Yekky to ring two or more unrelated alarms before the next time you can dismiss the alarm, make sure: Yekky is running (at least in the background) and your phone will not be in power save mode (between the alarms). In addition to cases like a "two day yom tov", and confirming both a morning and afternoon alarm, make sure to start Yekky if it should have rung an alarm while your phone was powered off.
 
 You can [visit our FAQ on the web](https://www.yekky.spoer.org/home/faq) for more info.
 

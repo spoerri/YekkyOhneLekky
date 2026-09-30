@@ -317,7 +317,8 @@ class AlarmLogic {
     private class func unoverride(_ now: Date, _ modelContext: ModelContext, _ date: Date) async throws {
         let start = Calendar.current.startOfDay(for: date)
         let stop = start + TimeInterval(60*60*24)
-        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.nextDayToFire && other.nextDayToFire < stop && other.isOverridden })).sorted(using: SortDescriptor(\.alarmType)).first {
+        //an overridden alarm's nextDayToFire was moved past the overridden day, so match on maybeDayToFire, which still has it
+        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.maybeDayToFire && other.maybeDayToFire < stop && other.isOverridden })).sorted(using: SortDescriptor(\.alarmType)).first {
             overriddenAlarm.isOverridden = false
             overriddenAlarm.nextDayToFire = overriddenAlarm.maybeDayToFire 
             await schedule(now, modelContext, overriddenAlarm)
