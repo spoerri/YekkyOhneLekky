@@ -82,6 +82,8 @@ class AlarmLogic {
         addForShabbosChanukah(&all, htoday.yy)
         addForShabbosChanukah(&all, htoday.yy+1)
         
+//        let chagimDescription = all.map{$0.desc}; AlarmLogger.shared.info("Chagim \(chagimDescription)")
+
         return all
     }
     
@@ -318,7 +320,7 @@ class AlarmLogic {
         let start = Calendar.current.startOfDay(for: date)
         let stop = start + TimeInterval(60*60*24)
         //an overridden alarm's nextDayToFire was moved past the overridden day, so match on maybeDayToFire, which still has it
-        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.maybeDayToFire && other.maybeDayToFire < stop && other.isOverridden })).sorted(using: SortDescriptor(\.alarmType)).first {
+        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.maybeDayToFire && other.maybeDayToFire < stop && other.isOverridden })).sorted(using: SortDescriptor(\.alarmTypeRaw)).first {
             overriddenAlarm.isOverridden = false
             overriddenAlarm.nextDayToFire = overriddenAlarm.maybeDayToFire 
             await schedule(now, modelContext, overriddenAlarm)
@@ -541,53 +543,91 @@ class AlarmLogic {
         }
     }
     
-    //TODO refactor - maybe the view should handle inserting?
-    //TODO maybe hard code the list
-    public static func initializeAlarms(_ now: Date, modelContext: ModelContext, alarms: [AlarmModel]) async throws {
-        AlarmLogger.shared.info("initializeAlarms")
-        printScheduledAlarms()
-        AlarmLogger.shared.info("unsched all")
-        try Manager.alarms.forEach{try Manager.cancel(id: $0.id )}
-        
+    //TODO share more with getNextDayToFire?
+    public static func initializeAlarms(_ now: Date, _ modelContext: ModelContext) async throws {
         let chagim = getChagim(now)
-//        let chagimDescription = chagim.map{$0.desc}
-//        AlarmLogger.shared.info("Chagim \(chagimDescription)")
         
-        try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: CholHamoed, nextDayToFire: chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!.hdate.greg(), alarmType: .cholHamoed)
-        try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: RoshChodesh, nextDayToFire: chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!.hdate.greg(), alarmType: .roshChodesh)
-
-        for chag in chagim.filter({ $0.flags.isDisjoint(with: [.CHOL_HAMOED, .ROSH_CHODESH, .SPECIAL_SHABBAT]) }) {
-            try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: chag.desc, nextDayToFire: chag.hdate.greg(), alarmType:
-                                    chag.flags.contains(.CHAG) ? .yomTov :
-                                    chag.flags.contains(.MINOR_FAST) || chag.desc == "Tish'a B'Av" ? .fast :
-                                    .minor)
-        }
+        let nextCholHamoed = chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!.hdate.greg()
+        insert(modelContext, AlarmModel(name: CholHamoed, alarmType: .cholHamoed, hour: 6, minute: 30,
+            maybeDayToFire: nextCholHamoed, nextDayToFire: nextCholHamoed, isEnabled: false, repetitions: 0))
+        
+        let nextRoshChodesh = chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!.hdate.greg()
+        insert(modelContext, AlarmModel(name: RoshChodesh, alarmType: .roshChodesh, hour: 6, minute: 15,
+           maybeDayToFire: nextRoshChodesh, nextDayToFire: nextRoshChodesh, isEnabled: false, repetitions: 0))
         
         for chag in chagim.filter({ $0.flags.contains(.SPECIAL_SHABBAT)}) {
-            try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: chag.desc, nextDayToFire: chag.hdate.greg(), alarmType: .specialSaturday)
+            insert(modelContext, AlarmModel( name: chag.desc, alarmType: .specialSaturday, hour: 7, minute: 30,
+               maybeDayToFire: chag.hdate.greg(), nextDayToFire: chag.hdate.greg(), isEnabled: false))
+        }
+        
+        for chag in chagim.filter({ $0.flags.contains(.CHAG)}) {
+            var hour: Int = 8
+            var minute: Int = 0
+            if ["Shmini Atzeret", "Pesach VIII", "Shavuot II"].contains(chag.desc) {
+                hour = 7
+                minute = 30
+            } else if chag.desc == "Simchat Torah" {
+                hour = 7
+            } else if chag.desc == "Yom Kippur" {
+                hour = 6
+                minute = 45
+            } else if chag.desc.starts(with: "Rosh Hashana") {
+                hour = 6
+            }
+            insert(modelContext, AlarmModel(name: chag.desc, alarmType: .yomTov, hour: hour, minute: minute, maybeDayToFire: chag.hdate.greg(), nextDayToFire: chag.hdate.greg(), isEnabled: false))
+        }
+
+        for chag in chagim.filter({ $0.flags.isDisjoint(with: [.CHOL_HAMOED, .ROSH_CHODESH, .SPECIAL_SHABBAT, .CHAG]) }) {
+            let hour = 6
+            var minute = 0
+            var alarmType = AlarmType.minor
+            if chag.flags.contains(.MINOR_FAST) || chag.desc == "Tish'a B'Av" {
+                minute = 15
+                alarmType = .fast
+            }
+            insert(modelContext, AlarmModel(name: chag.desc, alarmType: alarmType, hour: hour, minute: minute, maybeDayToFire: chag.hdate.greg(), nextDayToFire: chag.hdate.greg(), isEnabled: false, repetitions: 0))
         }
         
         for national in UsHolidays.allCases {
-            try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: national.rawValue, nextDayToFire: legalHoliday(now, national.rawValue), alarmType: .national)
+            do {
+                let d = try legalHoliday(now, national.rawValue)
+                insert(modelContext, AlarmModel(name: national.rawValue, alarmType: .national, hour: 7, minute: 0,
+                    maybeDayToFire: d, nextDayToFire: d, isEnabled: false, repetitions: 0))
+            } catch {
+                AlarmLogger.shared.error("Couldn't initialize legal holiday: \(error)")
+            }
         }
         
-        try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: "", nextDayToFire: now, alarmType: .weekDay)
-        try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: Saturday, nextDayToFire: getNextDayOfWeek(now, Set([Saturday]), 16, 0), alarmType: .saturday)
+        let weekDays = Set(allDaysOfWeek).subtracting([Saturday])
+        let alarm = AlarmModel(name: AlarmModel.nameFromDaysOfWeek(weekDays), alarmType: .weekDay, daysOfWeek: weekDays, hour: 6, minute: 30, maybeDayToFire: now, nextDayToFire: now, isEnabled: false, repetitions: 0)
+        modelContext.insert(alarm)
         
-        try await initializeAlarm(now, modelContext: modelContext, alarms: alarms, alarmName: Once, nextDayToFire: now, alarmType: .explicit)
+        let nextSaturday = try getNextDayOfWeek(now, Set([Saturday]), 8, 0)
+        insert(modelContext, AlarmModel(name: Saturday, alarmType: .saturday, daysOfWeek: Set([Saturday]), hour: 8, minute: 0, maybeDayToFire: nextSaturday, nextDayToFire: nextSaturday, isEnabled: false))
+
+        insert(modelContext, AlarmModel(name: Once, alarmType: .explicit, hour: 8, minute: 0,
+            maybeDayToFire: now, nextDayToFire: now, isEnabled: false))
         
-        for alarm in alarms.filter({$0.nextDayToFire < now && $0.isExplicit && $0.name != AlarmLogic.Once}) {
-            modelContext.delete(alarm)
-        }
-        
-        await scheduleNext(now, modelContext)
         printScheduledAlarms()
-        
+    }
+    
+    private static func insert(_ modelContext: ModelContext, _ alarm: AlarmModel) {
         do {
-            try modelContext.save()
+            let alarmName = alarm.name
+            if try modelContext.fetchCount(FetchDescriptor(predicate: #Predicate<AlarmModel> { $0.name == alarmName})) > 0 {
+                return
+            }
         } catch {
-            AlarmLogger.shared.error("Failed to initialize: \(error)")
+            AlarmLogger.shared.error("Could not check for already initialized alarm: \(error)")
         }
+        if groupLabel.keys.contains(alarm.alarmType) && alarm.name != Once && alarm.name != SaturdayErevPesach {
+            alarm.isGrouped = true
+        }
+        if alarm.name == SaturdayErevPesach { //handled here to not care whether hebcal considers it a special shabbos
+            alarm.hour = 6
+        }
+        AlarmLogger.shared.info("initializeAlarm: \(alarm.name)")
+        modelContext.insert(alarm)
     }
     
     public static func printScheduledAlarms() {
@@ -619,81 +659,10 @@ class AlarmLogic {
                 snapshot += "* \(date): \(timesForDateAbbrev[date]?.joined(separator: " ") ?? "?")\n"
             }
             AlarmLogger.shared.info("Snapshot:\n\(snapshot)")
+            //TODO print configured alarms
         } catch {
             AlarmLogger.shared.error("Couldn't print scheduled alarms: \(error)")
         }
-    }
-    
-    private static func initializeAlarm(_ now:Date, modelContext: ModelContext, alarms: [AlarmModel], alarmName: String, nextDayToFire: Date, alarmType: AlarmType) async throws {
-        if alarmType == .weekDay {
-            let existingAlarms = alarms.filter{ $0.isWeekDay }
-            if (!existingAlarms.isEmpty) {
-                for alarm in existingAlarms {
-                    try await reschedule(now, modelContext, alarm)
-                }
-                return
-            }
-        } else if alarmType == .explicit {
-            let existingAlarms = alarms.filter{ $0.isExplicit }
-            if (!existingAlarms.isEmpty) {
-                for alarm in existingAlarms {
-                    try await reschedule(now, modelContext, alarm)
-                }
-                return
-            }
-        } else {
-            if let alarm = alarms.first(where: { $0.name == alarmName }) {
-                try await reschedule(now, modelContext, alarm)
-                return
-            }
-        }
-        //AlarmLogger.shared.info("initializing \(alarmName)")
-        let alarm = AlarmModel(
-            name: alarmName,
-            alarmType: alarmType,
-            hour: 8,
-            minute: 0,
-            maybeDayToFire: nextDayToFire,
-            nextDayToFire: nextDayToFire,
-            isEnabled: false
-        )
-        if alarmType != .yomTov && alarmType != .saturday && alarmType != .specialSaturday {
-            alarm.duration = nil
-            alarm.repetitions = 0
-        }
-        //TODO think about groups and different times?
-        if alarmName == SaturdayErevPesach {
-            alarm.hour = 6
-            alarm.minute = 0
-        } else if alarmType == .specialSaturday || ["Shmini Atzeret", "Pesach VIII", "Shavuot II"].contains(alarm.name) {
-            alarm.hour = 7
-            alarm.minute = 30
-        } else if alarmType == .national || alarm.name == "Simchat Torah" {
-            alarm.hour = 7
-            alarm.minute = 0
-        } else if alarm.name == "Yom Kippur" {
-            alarm.hour = 6
-            alarm.minute = 45
-        } else if alarmType == .weekDay {
-            alarm.daysOfWeek = Set(allDaysOfWeek).subtracting([Saturday])
-            alarm.name = AlarmModel.nameFromDaysOfWeek(alarm.daysOfWeek)
-            alarm.hour = 6
-            alarm.minute = 30
-        } else if alarmType == .fast || alarmType == .roshChodesh {
-            alarm.hour = 6
-            alarm.minute = 15
-        } else if alarmType == .cholHamoed {
-            alarm.hour = 6
-            alarm.minute = 30
-        } else if alarmType == .minor || alarm.name.starts(with: "Rosh Hashana") {
-            alarm.hour = 6
-            alarm.minute = 0
-        }
-        if groupLabel.keys.contains(alarmType) && alarmName != Once {
-            alarm.isGrouped = alarm.name != SaturdayErevPesach
-        }
-        AlarmLogger.shared.info("initializeAlarm: \(alarm.name)")
-        modelContext.insert(alarm)
     }
 }
 

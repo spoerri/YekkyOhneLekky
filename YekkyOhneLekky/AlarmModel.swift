@@ -23,7 +23,8 @@ class AlarmModel {
     var duration: TimeInterval?
     var repetitions: Int
     var repetitionDelay: TimeInterval
-    var alarmType: AlarmType //TODO change to an Int, to avoid crashes?
+    //stored as a plain Int so an unknown/removed enum case can't crash decoding; use alarmType instead
+    @Attribute(originalName: "alarmType") var alarmTypeRaw: Int
     var isExplicit: Bool
     var isWeekDay: Bool
     var isShabbos: Bool
@@ -45,11 +46,24 @@ class AlarmModel {
         self.duration = duration
         self.repetitions = repetitions
         self.repetitionDelay = repetitionDelay
-        self.alarmType = alarmType
+        self.alarmTypeRaw = alarmType.rawValue
         //TODO maybe these are evil
         self.isExplicit = alarmType == .explicit
         self.isWeekDay = alarmType == .weekDay
         self.isShabbos = alarmType == .saturday
+    }
+    
+    var alarmType: AlarmType {
+        get {
+            if let type = AlarmType(rawValue: alarmTypeRaw) {
+                return type
+            }
+            AlarmLogger.shared.error("unknown alarmType \(alarmTypeRaw) for \(name), treating as explicit")
+            return .explicit
+        }
+        set {
+            alarmTypeRaw = newValue.rawValue
+        }
     }
     
     var timeString: String {

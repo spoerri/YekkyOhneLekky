@@ -75,12 +75,17 @@ struct AlarmListView: View {
                 EditAlarmView(editingAlarm: alarm)
             }
             .task {
+                let now = Testable.Date()
                 do {
-                    try await AlarmLogic.initializeAlarms(Testable.Date(), modelContext: modelContext, alarms: alarms)
+                    try await AlarmLogic.initializeAlarms(now, modelContext)
                 } catch {
-                    AlarmLogger.shared.error("Could not initialize")
+                    AlarmLogger.shared.error("Failed to initialize: \(error)")
                     showAlert = true
                 }
+                for alarm in alarms.filter({$0.nextDayToFire < now && $0.isExplicit && $0.name != AlarmLogic.Once}) {
+                    modelContext.delete(alarm)
+                }
+                await AlarmLogic.scheduleNext(now, modelContext)
             }
         }
         .alert("Encountered a problem", isPresented: $showAlert) {
