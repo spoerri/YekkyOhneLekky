@@ -51,9 +51,14 @@ struct AlarmListView: View {
                             do {
                                 try alarm.unschedule()
                             } catch {
-                                AlarmLogger.shared.error("Couldn't disable all")
+                                AlarmLogger.shared.error("Couldn't disable")
                                 showAlert = true
                             }
+                        }
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            AlarmLogger.shared.error("Failed to disable all: \(error)")
                         }
                     }.sensoryFeedback(.warning, trigger: alarms)
                     .foregroundColor(.red)

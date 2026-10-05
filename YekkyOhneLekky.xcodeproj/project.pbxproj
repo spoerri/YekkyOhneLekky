@@ -132,6 +132,7 @@
 				03AFC12B2E80AA8300F106C8 /* Sources */,
 				03AFC12C2E80AA8300F106C8 /* Frameworks */,
 				03AFC12D2E80AA8300F106C8 /* Resources */,
+				03C0FFEE2EE0000000000001 /* Set Build Number */,
 			);
 			buildRules = (
 			);
@@ -207,6 +208,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		03C0FFEE2EE0000000000001 /* Set Build Number */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Set Build Number";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "build=$(git -C \"$SRCROOT\" rev-list --count HEAD 2>/dev/null || echo \"$CURRENT_PROJECT_VERSION\")\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $build\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		032502333028AE1C0067C24D /* Sources */ = {
@@ -406,6 +429,7 @@
 		03AFC13B2E80AA8600F106C8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = "Alarm Clock";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
@@ -444,6 +468,7 @@
 		03AFC13C2E80AA8600F106C8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = "Alarm Clock";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;

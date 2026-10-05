@@ -5,6 +5,7 @@ import AppIntents
 import SwiftData
 
 let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String //set to the git commit count by the "Set Build Number" build phase
 let versionLastRunKey = "versionLastRun"
 
 struct ContentView: View {
@@ -52,6 +53,9 @@ I hope you enjoy it!
 
 With love, and with gratitude to the boreh olam, Joshua Spoerri
 """).padding()
+                Text("Version \(version ?? "?") (build \(build ?? "?"))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 HStack {
                     Spacer()
                     Link("Contact me", destination: URL(string: "mailto:spoerri@gmail.com?subject=YekkyOhneLekky")!)

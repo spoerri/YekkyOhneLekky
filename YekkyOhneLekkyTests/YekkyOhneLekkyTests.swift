@@ -128,15 +128,15 @@ struct YekkyOhneLekkyTests {
         #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday)]))
         #expect(second.ids.isEmpty)
         
-        //once it's past, the next one is scheduled (the first is left alone in case it's still ringing)
+        //once it's past, the next one is scheduled and the first comes out (it would be left only if it were ringing)
         await AlarmLogic.scheduleNext(at(7, 1, on: tuesday), context)
-        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday), at(7, 0, on: wednesday)]))
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: wednesday)]))
         
         //an earlier alarm added later replaces the one that's waiting
         let earlier = AlarmModel(name: "earlier", alarmType: .explicit, hour: 9, minute: 0, maybeDayToFire: AlarmModel.day(tuesday), nextDayToFire: AlarmModel.day(tuesday), duration: nil, repetitions: 0)
         context.insert(earlier)
         await AlarmLogic.scheduleNext(at(8, 0, on: tuesday), context)
-        #expect(mock.scheduled.values.sorted().elementsEqual([at(7, 0, on: tuesday), at(9, 0, on: tuesday)]))
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(9, 0, on: tuesday)]))
         #expect(second.ids.isEmpty)
     }
 

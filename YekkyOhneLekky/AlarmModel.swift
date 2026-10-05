@@ -133,6 +133,7 @@ class AlarmModel {
         return try getAlarmDateAndTime(maybeDayToFire) <= now
     }
     
+    //this whole function is not strictly necessary, b/c AlarmLogic.scheduleNext cancels anything unexpected
     func unschedule() throws {
         var scheduled = Dictionary<UUID, String>()
         for alarm in try AlarmLogic.Manager.alarms {
@@ -148,15 +149,15 @@ class AlarmModel {
                 if let d = scheduled[id] {
                     AlarmLogger.shared.info("unsched \(d)")
                     try AlarmLogic.Manager.cancel(id: id)
-                    ids.removeAll(where: { $0 == id }) //if there's an exception, try again next time
                 } else {
-                    ids.removeAll(where: { $0 == id })
                     expiredCount += 1
                 }
+                ids.removeAll(where: { $0 == id }) //if there was an exception, try removing again next time
             } catch {
                 AlarmLogger.shared.error("could not unschedule \(id)!")
             }
         }
+        
         if expiredCount > 0 {
             AlarmLogger.shared.info("unsched \(expiredCount) expired")
         }

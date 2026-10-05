@@ -20,9 +20,7 @@ class AlarmLogic {
     public static var Manager: TestableAlarmManager = AlarmManager.shared
     
     public class func getEarliest(_ now: Date, _ day: String?) -> Date? {
-        
-        //TODO save it, and keep using the old value if we can't get a new one
-        
+        //TODO save the location, and keep using the old value if we can't get a new one
         guard let day = day else {
             return nil
         }
@@ -421,13 +419,13 @@ class AlarmLogic {
             }
             let next = upcoming.min(by: { $0.date < $1.date })?.alarm
             
-            //anything else that's scheduled and hasn't fired yet comes out, e.g. when an earlier alarm was just saved,
-            //or left over from when every alarm was scheduled at once.
-            //alarms whose time already passed are left alone, so their repetitions still ring.
-            for alarm in all where !alarm.ids.isEmpty && alarm != next {
-                if try alarm.getAlarmDateAndTime() >= now {
-                    try alarm.unschedule()
+            //whatever AlarmKit has that isn't next's comes out, whether or not it belongs to some other AlarmModel
+            let keep = Set(next?.ids ?? [])
+            for alarm in try Manager.alarms where !keep.contains(alarm.id) && alarm.state != .alerting {
+                if case let .fixed(date) = alarm.schedule {
+                    AlarmLogger.shared.info("surprising unsched \(date.formatted())")
                 }
+                try Manager.cancel(id: alarm.id)
             }
             
             guard let next = next else {
