@@ -78,7 +78,7 @@ struct AlarmListView: View {
                     AlarmLogger.shared.error("Failed to initialize: \(error)")
                     showAlert = true
                 }
-                for alarm in alarms.filter({$0.nextDayToFire < AlarmModel.day(now) && $0.isExplicit && $0.name != AlarmLogic.Once}) {
+                for alarm in alarms.filter({$0.nextDayToFire < AlarmModel.day(now) && $0.alarmType == .explicit && $0.name != AlarmLogic.Once}) {
                     modelContext.delete(alarm)
                 }
                 await AlarmLogic.scheduleNext(now, modelContext)

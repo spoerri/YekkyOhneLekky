@@ -76,10 +76,11 @@ struct EditAlarmView: View {
                         get: { AlarmModel.date(nextDayToFire) },
                         set: {
                             nextDayToFire = AlarmModel.day($0)
+                            maybeDayToFire = nextDayToFire //a picked day isn't overridden
                             //default to the time of the alarm to be overridden
                             if alarmName == AlarmLogic.Once {
                                 let day = nextDayToFire
-                                if let existingAlarm = try? modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> {$0.nextDayToFire == day && $0.name != alarmName && !$0.isOverridden})).first {
+                                if let existingAlarm = try? modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> {$0.nextDayToFire == day && $0.name != alarmName && $0.maybeDayToFire == $0.nextDayToFire})).first {
                                     if existingAlarm.nextDayToFire != AlarmModel.day(Testable.Date()) {
                                         do {
                                             selectedTime = try existingAlarm.getAlarmDateAndTime()
@@ -219,7 +220,6 @@ struct EditAlarmView: View {
             let originalDaysOfWeek = editingAlarm.daysOfWeek
             editingAlarm.daysOfWeek = daysOfWeek
             editingAlarm.isEnabled = isEnabled
-            editingAlarm.isOverridden = isOverridden
             editingAlarm.isExtra = isExtra
             editingAlarm.isGrouped = isGrouped
             editingAlarm.selectedSound = selectedSound

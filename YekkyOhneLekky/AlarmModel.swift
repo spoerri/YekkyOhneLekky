@@ -11,10 +11,9 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
-    var maybeDayToFire: String //yyyy-MM-dd in local time; the alarm's own time is in hour and minute
-    var nextDayToFire: String //yyyy-MM-dd in local time; the alarm's own time is in hour and minute
+    var maybeDayToFire: String //yyyy-MM-dd in local time
+    var nextDayToFire: String //yyyy-MM-dd in local time; differs from maybeDayToFire when the alarm is overridden on maybeDayToFire
     var isEnabled: Bool
-    var isOverridden: Bool //TODO remove, replaced by maybeDayToFire != nextDayToFire
     var isExtra: Bool
     var isGrouped: Bool
     var daysOfWeek: Set<String>
@@ -25,11 +24,8 @@ class AlarmModel {
     var repetitionDelay: TimeInterval
     //stored as a plain Int so an unknown/removed enum case can't crash decoding; use alarmType instead
     @Attribute(originalName: "alarmType") var alarmTypeRaw: Int
-    var isExplicit: Bool
-    var isWeekDay: Bool
-    var isShabbos: Bool
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: String, nextDayToFire: String, isEnabled: Bool = true, isOverridden: Bool = false, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval? = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: String, nextDayToFire: String, isEnabled: Bool = true, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval? = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
@@ -37,7 +33,6 @@ class AlarmModel {
         self.maybeDayToFire = maybeDayToFire
         self.nextDayToFire = nextDayToFire
         self.isEnabled = isEnabled
-        self.isOverridden = isOverridden
         self.isExtra = isExtra
         self.isGrouped = isGrouped
         self.daysOfWeek = daysOfWeek
@@ -47,10 +42,6 @@ class AlarmModel {
         self.repetitions = repetitions
         self.repetitionDelay = repetitionDelay
         self.alarmTypeRaw = alarmType.rawValue
-        //TODO maybe these are evil
-        self.isExplicit = alarmType == .explicit
-        self.isWeekDay = alarmType == .weekDay
-        self.isShabbos = alarmType == .saturday
     }
     
     var alarmType: AlarmType {
@@ -99,6 +90,11 @@ class AlarmModel {
             return Date.distantFuture
         }
         return date
+    }
+    
+    //overridden on maybeDayToFire by another alarm that day, so it next fires on nextDayToFire
+    var isOverridden: Bool {
+        return maybeDayToFire != nextDayToFire
     }
     
     var timeString: String {

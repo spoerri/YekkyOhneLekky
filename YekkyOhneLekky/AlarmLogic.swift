@@ -243,7 +243,8 @@ class AlarmLogic {
     }
     
     public class func disablePastOneOffs(_ now: Date, _ modelContext: ModelContext?) throws {
-        if let enabled = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.isEnabled && other.isExplicit })) {
+        let explicit = AlarmType.explicit.rawValue
+        if let enabled = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.isEnabled && other.alarmTypeRaw == explicit })) {
             for alarm in enabled {
                 if alarm.name != AlarmLogic.Once, try alarm.getAlarmDateAndTime() < now {
                     alarm.isEnabled = false
@@ -274,7 +275,8 @@ class AlarmLogic {
             newAlarm.isEnabled = false
             modelContext.insert(newAlarm)
         }
-        for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { $0.isWeekDay })) {
+        let weekDay = AlarmType.weekDay.rawValue
+        for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { $0.alarmTypeRaw == weekDay })) {
             if !editingAlarm.daysOfWeek.isDisjoint(with: alarm.daysOfWeek) && alarm != editingAlarm {
                 alarm.daysOfWeek.subtract(editingAlarm.daysOfWeek)
                 if alarm.daysOfWeek.isEmpty {
@@ -311,8 +313,7 @@ class AlarmLogic {
     
     private class func unoverride(_ now: Date, _ modelContext: ModelContext, _ day: String) async throws {
         //an overridden alarm's nextDayToFire was moved past the overridden day, so match on maybeDayToFire, which still has it
-        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.maybeDayToFire == day && other.isOverridden })).sorted(using: SortDescriptor(\.alarmTypeRaw)).first {
-            overriddenAlarm.isOverridden = false
+        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.maybeDayToFire == day && other.maybeDayToFire != other.nextDayToFire })).sorted(using: SortDescriptor(\.alarmTypeRaw)).first {
             overriddenAlarm.nextDayToFire = overriddenAlarm.maybeDayToFire 
             await schedule(now, modelContext, overriddenAlarm)
         }
@@ -323,14 +324,15 @@ class AlarmLogic {
             return
         }
         
-        if alarm.isOverridden && alarm.nextDayToFire == AlarmModel.day(now) {
+        if alarm.isOverridden && alarm.maybeDayToFire == AlarmModel.day(now) {
             return
         }
         
-        alarm.isOverridden = false
+        //start over from the alarm's own day, and work out afresh whether it's overridden there
+        alarm.nextDayToFire = alarm.maybeDayToFire
         
         let alarmName = alarm.name
-        let day = alarm.nextDayToFire
+        let day = alarm.maybeDayToFire
         let startOfDayAfter = AlarmModel.date(AlarmModel.addingDays(day, 1)) //so the overridden day itself is skipped
         
         for other in try modelContext.fetch(FetchDescriptor<AlarmModel>()) {
@@ -342,29 +344,29 @@ class AlarmLogic {
                 //extra alarms neither override nor are overridden
             } else if other.alarmType > alarm.alarmType {
                 try other.unschedule()
-                other.isOverridden = true
                 other.nextDayToFire = try getNextDayToFire(startOfDayAfter, other)
             } else if other.isEnabled {
-                alarm.isOverridden = true
                 alarm.nextDayToFire = try getNextDayToFire(startOfDayAfter, alarm)
             }
         }
         
         //if this alarm falls on a saturday or sunday which hasn't been scheduled yet, and is lower priority, and if the saturday/sunday alarm is enabled then override this alarm
-        let dayOfWeek = AlarmLogic.dayOfWeek(alarm.nextDayToFire)
-        let startOfDayAfterWeekendDay = AlarmModel.date(AlarmModel.addingDays(alarm.nextDayToFire, 1))
+        if alarm.isOverridden {
+            return //already overridden on its day
+        }
+        let dayOfWeek = AlarmLogic.dayOfWeek(day)
+        let saturday = AlarmType.saturday.rawValue
+        let weekDay = AlarmType.weekDay.rawValue
         if dayOfWeek == Saturday && alarm.alarmType > .saturday {
             try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
-                other.isEnabled && other.isShabbos && !other.isExtra })).forEach { _ in
-                alarm.isOverridden = true
-                alarm.nextDayToFire = try getNextDayToFire(startOfDayAfterWeekendDay, alarm)
+                other.isEnabled && other.alarmTypeRaw == saturday && !other.isExtra })).forEach { _ in
+                alarm.nextDayToFire = try getNextDayToFire(startOfDayAfter, alarm)
             }
         } else if dayOfWeek == Sunday && alarm.alarmType > .national && alarm.alarmType != .weekDay {
             try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
-                other.isEnabled && other.isWeekDay && !other.isExtra })).forEach { other in
+                other.isEnabled && other.alarmTypeRaw == weekDay && !other.isExtra })).forEach { other in
                     if other.daysOfWeek.contains(dayOfWeek) {
-                        alarm.isOverridden = true
-                        alarm.nextDayToFire = try getNextDayToFire(startOfDayAfterWeekendDay, alarm)
+                        alarm.nextDayToFire = try getNextDayToFire(startOfDayAfter, alarm)
                     }
                 }
         }

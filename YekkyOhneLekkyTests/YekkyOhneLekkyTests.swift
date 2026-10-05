@@ -72,15 +72,17 @@ struct YekkyOhneLekkyTests {
         let thursday = Calendar.current.date(byAdding: .day, value: 1, to: wednesday)!
         let nextRoshChodesh = Calendar.current.date(byAdding: .day, value: 30, to: tuesday)!
         
-        let weekdayAlarm = AlarmModel(name: "Wed,Thu", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Wednesday", "Thursday"]), hour:7, minute:30, maybeDayToFire: AlarmModel.day(tuesday), nextDayToFire: AlarmModel.day(tuesday), isOverridden: true, duration: nil, repetitions: 0)
+        let weekdayAlarm = AlarmModel(name: "Wed,Thu", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Wednesday", "Thursday"]), hour:7, minute:30, maybeDayToFire: AlarmModel.day(tuesday), nextDayToFire: AlarmModel.day(tuesday), duration: nil, repetitions: 0)
         context.insert(weekdayAlarm) //in real execution initializeAlarms does this
-        weekdayAlarm.nextDayToFire = try AlarmLogic.getNextDayToFire(tuesday, weekdayAlarm)
+        weekdayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(tuesday, weekdayAlarm)
+        weekdayAlarm.nextDayToFire = weekdayAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(tuesday, context, weekdayAlarm, Set(), nil)
         #expect(mock.scheduled.values.elementsEqual([at(7, 30, on: wednesday)]))
         
         let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:7, minute:15, maybeDayToFire: AlarmModel.day(tuesday), nextDayToFire: AlarmModel.day(tuesday), duration: nil, repetitions: 0)
         context.insert(roshChodeshAlarm) //in real execution initializeAlarms does this
-        roshChodeshAlarm.nextDayToFire = try AlarmLogic.getNextDayToFire(tuesday, roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(tuesday, roshChodeshAlarm)
+        roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(tuesday, context, roshChodeshAlarm, Set(), nil)
         #expect(mock.scheduled.values.elementsEqual([at(7, 15, on: wednesday)]))
         
