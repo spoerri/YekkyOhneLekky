@@ -11,8 +11,8 @@ class AlarmModel {
     var ids: Array<UUID>
     var hour: Int
     var minute: Int
-    var maybeDayToFire: Date //note that this may or may not have the alarm time in it
-    var nextDayToFire: Date //note that this may or may not have the alarm time in it
+    var maybeDayToFire: String //yyyy-MM-dd in local time; the alarm's own time is in hour and minute
+    var nextDayToFire: String //yyyy-MM-dd in local time; the alarm's own time is in hour and minute
     var isEnabled: Bool
     var isOverridden: Bool //TODO remove, replaced by maybeDayToFire != nextDayToFire
     var isExtra: Bool
@@ -29,7 +29,7 @@ class AlarmModel {
     var isWeekDay: Bool
     var isShabbos: Bool
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: Date, nextDayToFire: Date, isEnabled: Bool = true, isOverridden: Bool = false, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval? = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: String, nextDayToFire: String, isEnabled: Bool = true, isOverridden: Bool = false, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval? = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
@@ -66,6 +66,41 @@ class AlarmModel {
         }
     }
     
+    //a day that never comes, for an alarm whose day hasn't been worked out yet
+    nonisolated static let never = "9999-12-31"
+    
+    //gregorian regardless of the user's calendar setting, so the stored days are always yyyy-MM-dd
+    nonisolated private static var gregorian: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Calendar.current.timeZone
+        return calendar
+    }
+    
+    //the yyyy-MM-dd day that an instant falls on, in local time
+    nonisolated static func day(_ date: Date) -> String {
+        let c = gregorian.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
+    }
+    
+    nonisolated static func addingDays(_ day: String, _ n: Int) -> String {
+        return AlarmModel.day(gregorian.date(byAdding: .day, value: n, to: date(day))!)
+    }
+    
+    nonisolated static func addingYears(_ day: String, _ n: Int) -> String {
+        return AlarmModel.day(gregorian.date(byAdding: .year, value: n, to: date(day))!)
+    }
+    
+    //start of that day in local time; only for handing a day to APIs that need a Date
+    nonisolated static func date(_ day: String) -> Date {
+        let calendar = gregorian
+        let parts = day.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3, let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) else {
+            AlarmLogger.shared.error("bad day \(day)")
+            return Date.distantFuture
+        }
+        return date
+    }
+    
     var timeString: String {
 //        if let earliest = getEarliestTimeIfEarlier() {
 //            return String(format: "%02d", earliest[0])+":"+String(format: "%02d", earliest[1])
@@ -93,8 +128,8 @@ class AlarmModel {
         return try getAlarmDateAndTime(nextDayToFire)
     }
     
-    func getAlarmDateAndTime(_ date: Date) throws -> Date {
-        guard let fullDate = Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: date) else { throw AlarmError.ugh }
+    func getAlarmDateAndTime(_ day: String) throws -> Date {
+        guard let fullDate = Calendar.current.date(bySettingHour: hour, minute: minute, second:0, of: AlarmModel.date(day)) else { throw AlarmError.ugh }
         return fullDate
     }
     

@@ -19,13 +19,14 @@ class AlarmLogic {
     public static let groupLabel: [AlarmType: String] = [.yomTov: "yomim tovim", .explicit: "one offs", .national: "nationals", .fast: "fasts", .specialSaturday: "special shabboses"]
     public static var Manager: TestableAlarmManager = AlarmManager.shared
     
-    public class func getEarliest(_ now: Date, _ date: Date?) -> Date? {
+    public class func getEarliest(_ now: Date, _ day: String?) -> Date? {
         
         //TODO save it, and keep using the old value if we can't get a new one
         
-        guard let date = date else {
+        guard let day = day else {
             return nil
         }
+        let date = AlarmModel.date(day)
         let locManager = CLLocationManager()
         locManager.requestWhenInUseAuthorization()
         var currentLocation: CLLocation! = locManager.location
@@ -49,8 +50,8 @@ class AlarmLogic {
         }
     }
     
-    private class func getChagim(_ now: Date) -> [HEvent] {
-        let htoday = HDate(date: Calendar.current.date(byAdding: .month, value: 0, to: now)!, calendar: .current)
+    private class func getChagim(onOrAfter day: String) -> [HEvent] {
+        let htoday = HDate(date: AlarmModel.date(day), calendar: .current)
         
         //TODO allow manually overriding this
         let il = Locale.current.region == Locale.Region.israel
@@ -62,7 +63,7 @@ class AlarmLogic {
                 || $0.desc == "Purim" || $0.desc.contains("Yom Kippur") || $0.desc.contains("Hoshana") || ($0.desc.starts(with:"Chanuka") && !$0.flags.contains(.EREV)))
             }
         
-        let thisYears = Hebcal.getAllHolidaysForYear(year: htoday.yy).filter(holidayFilter).filter{ $0.hdate > htoday }
+        let thisYears = Hebcal.getAllHolidaysForYear(year: htoday.yy).filter(holidayFilter).filter{ $0.hdate >= htoday }
         //AlarmLogger.shared.info("This year's \(thisYears.map{ $0.hdate.greg() })")
         let thisYearsHolidayNames = thisYears.map({ $0.desc })
         let nextYears = Hebcal.getAllHolidaysForYear(year: htoday.yy+1).filter(holidayFilter).filter{ !thisYearsHolidayNames.contains($0.desc) }
@@ -120,76 +121,77 @@ class AlarmLogic {
         all.removeAll(where: { $0.desc.starts(with:"Chanuka") })
     }
     
-    private class func getNextDayOfWeek(_ now: Date, _ daysOfWeek: Set<String>, _ hour: Int, _ minute: Int) throws -> Date {
-        var date = now
-        let currentHour = Calendar.current.component(.hour, from: date)
-        let currentMinute = Calendar.current.component(.minute, from: date)
-        if currentHour > hour || (currentHour == hour && currentMinute >= minute) {
-            date = nextDay(date)
-        }
+    private class func getNextDayOfWeek(onOrAfter day: String, _ daysOfWeek: Set<String>) throws -> String {
+        var day = day
         for _ in 0..<allDaysOfWeek.count {
-            if daysOfWeek.contains(allDaysOfWeek[Calendar.current.component(.weekday, from: date)-1]) {
-                return date
+            if daysOfWeek.contains(dayOfWeek(day)) {
+                return day
             }
-            date = nextDay(date)
+            day = AlarmModel.addingDays(day, 1)
         }
         throw AlarmError.ugh
     }
     
-    //TODO support saving an alarm all night for the coming day, with code like currentMinute check above
-    //TODO check that getChagim does indeed start with tomorrow
-    
-    private static func nextDay(_ d: Date) -> Date {
-        return d+TimeInterval(60*60*24)
+    public static func dayOfWeek(_ day: String) -> String {
+        return allDaysOfWeek[Calendar.current.component(.weekday, from: AlarmModel.date(day)) - 1]
     }
-    
-    public class func getNextDayToFire(_ now: Date, _ alarm: AlarmModel) throws -> Date {
+        
+    public class func getNextDayToFire(_ now: Date, _ alarm: AlarmModel) throws -> String {
+        let today = AlarmModel.day(now)
         if alarm.name == Once {
-            return now
+            return today
         }
         if alarm.alarmType == .explicit {
             return alarm.nextDayToFire
         }
+        let alarmTimeToday = try alarm.getAlarmDateAndTime(today)
+        let start = now > alarmTimeToday ? AlarmModel.addingDays(today, 1) : today
         if !alarm.daysOfWeek.isEmpty {
-            return try getNextDayOfWeek(now, alarm.daysOfWeek, alarm.hour, alarm.minute)
+            return try getNextDayOfWeek(onOrAfter: start, alarm.daysOfWeek)
         }
         if alarm.alarmType == .saturday {
-            return try getNextDayOfWeek(now, Set([Saturday]), alarm.hour, alarm.minute)
+            return try getNextDayOfWeek(onOrAfter: start, Set([Saturday]))
         }
         if alarm.alarmType == .national {
-            return try legalHoliday(now, alarm.name)
+            return try legalHoliday(onOrAfter: start, alarm.name)
         }
-        let chagim = getChagim(now)
+        let chagim = getChagim(onOrAfter: start)
         if let chag = chagim.filter({ $0.desc == alarm.name }).first {
-            return chag.hdate.greg()
+            return day(chag)
         }
         if alarm.alarmType == .cholHamoed {
             if let chag = chagim.filter({ $0.flags.contains(.CHOL_HAMOED) }).first {
-                return chag.hdate.greg()
+                return day(chag)
             }
         }
         if alarm.alarmType == .roshChodesh {
             if let chag = chagim.filter({ $0.flags.contains(.ROSH_CHODESH) }).first {
-                return chag.hdate.greg()
+                return day(chag)
             }
         }
         throw AlarmError.ugh
     }
     
-    private class func legalHoliday(_ now:Date, _ name: String) throws -> Date {
+    private static func day(_ chag: HEvent) -> String {
+        return AlarmModel.day(chag.hdate.greg())
+    }
+    
+    private class func legalHoliday(onOrAfter day: String, _ name: String) throws -> String {
         guard let legalHoliday = UsHolidays.init(rawValue: name) else {
             throw AlarmError.ugh
         }
-        let year = Calendar.current.component(.year, from: nextDay(now))
-        let thisYears = try legalHoliday.date(in: year)
-        if thisYears > now {
+        guard let year = Int(day.prefix(4)) else {
+            throw AlarmError.ugh
+        }
+        let thisYears = try legalHoliday.day(in: year)
+        if thisYears >= day {
             return thisYears
         } else {
-            return try legalHoliday.date(in: year+1)
+            return try legalHoliday.day(in: year+1)
         }
     }
     
-    public class func saveAlarm(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel, _ originalDaysOfWeek: Set<String>, _ originalDayToFire: Date?) async throws {
+    public class func saveAlarm(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel, _ originalDaysOfWeek: Set<String>, _ originalDayToFire: String?) async throws {
         
         if editingAlarm.alarmType == .weekDay {
             try await saveWeekDayAlarms(now, modelContext, editingAlarm, originalDaysOfWeek)
@@ -228,9 +230,7 @@ class AlarmLogic {
     
     private static func saveEditingAlarm(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
         if editingAlarm.name != AlarmLogic.Once && editingAlarm.alarmType == AlarmType.explicit {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-            let alarmName = dateFormatter.string(from: editingAlarm.nextDayToFire)
+            let alarmName = editingAlarm.nextDayToFire
             if alarmName != editingAlarm.name {
                 if let sameNamed = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.name == alarmName})).first {
                     try sameNamed.unschedule()
@@ -243,10 +243,9 @@ class AlarmLogic {
     }
     
     public class func disablePastOneOffs(_ now: Date, _ modelContext: ModelContext?) throws {
-        let endOfToday = Calendar.current.startOfDay(for: now) + TimeInterval(60*60*24)
-        if let todays = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.isEnabled && other.nextDayToFire <= endOfToday})) {
-            for alarm in todays {
-                if alarm.nextDayToFire < now && alarm.alarmType == .explicit && alarm.name != AlarmLogic.Once {
+        if let enabled = try modelContext?.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.isEnabled && other.isExplicit })) {
+            for alarm in enabled {
+                if alarm.name != AlarmLogic.Once, try alarm.getAlarmDateAndTime() < now {
                     alarm.isEnabled = false
                 }
             }
@@ -266,8 +265,8 @@ class AlarmLogic {
                 daysOfWeek: removedDays,
                 hour: editingAlarm.hour,
                 minute: editingAlarm.minute,
-                maybeDayToFire: Date.distantFuture,
-                nextDayToFire: Date.distantFuture
+                maybeDayToFire: AlarmModel.never,
+                nextDayToFire: AlarmModel.never
             )
             newAlarm.maybeDayToFire = try getNextDayToFire(now, newAlarm)
             newAlarm.nextDayToFire = newAlarm.maybeDayToFire
@@ -295,14 +294,8 @@ class AlarmLogic {
     }
     
     private static func saveNewOneOffAlarm(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel) async {
-        let dateFormatter = DateFormatter()
-        if (editingAlarm.isExtra) {
-            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
-        } else {
-            dateFormatter.dateFormat = "yyyy-MM-dd"
-        }
         let newAlarm = AlarmModel(
-            name: dateFormatter.string(from: editingAlarm.nextDayToFire),
+            name: editingAlarm.isExtra ? editingAlarm.nextDayToFire + " " + editingAlarm.timeString : editingAlarm.nextDayToFire,
             alarmType: AlarmType.explicit,
             hour: editingAlarm.hour,
             minute: editingAlarm.minute,
@@ -316,11 +309,9 @@ class AlarmLogic {
         await schedule(now, modelContext, newAlarm)
     }
     
-    private class func unoverride(_ now: Date, _ modelContext: ModelContext, _ date: Date) async throws {
-        let start = Calendar.current.startOfDay(for: date)
-        let stop = start + TimeInterval(60*60*24)
+    private class func unoverride(_ now: Date, _ modelContext: ModelContext, _ day: String) async throws {
         //an overridden alarm's nextDayToFire was moved past the overridden day, so match on maybeDayToFire, which still has it
-        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in start <= other.maybeDayToFire && other.maybeDayToFire < stop && other.isOverridden })).sorted(using: SortDescriptor(\.alarmTypeRaw)).first {
+        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.maybeDayToFire == day && other.isOverridden })).sorted(using: SortDescriptor(\.alarmTypeRaw)).first {
             overriddenAlarm.isOverridden = false
             overriddenAlarm.nextDayToFire = overriddenAlarm.maybeDayToFire 
             await schedule(now, modelContext, overriddenAlarm)
@@ -332,21 +323,18 @@ class AlarmLogic {
             return
         }
         
-        if alarm.isOverridden && Calendar.current.startOfDay(for: alarm.nextDayToFire) == Calendar.current.startOfDay(for: now) {
+        if alarm.isOverridden && alarm.nextDayToFire == AlarmModel.day(now) {
             return
         }
         
         alarm.isOverridden = false
         
         let alarmName = alarm.name
-        let start = Calendar.current.startOfDay(for: alarm.nextDayToFire)
-        let stop = start+TimeInterval(60*60*24)
+        let day = alarm.nextDayToFire
+        let startOfDayAfter = AlarmModel.date(AlarmModel.addingDays(day, 1)) //so the overridden day itself is skipped
         
-//        let sameDayAlarms = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in
-//            start <= other.nextDayToFire && other.nextDayToFire < stop &&
-//            other.name != alarmName && !other.isOverridden && other.name != Once}))
         for other in try modelContext.fetch(FetchDescriptor<AlarmModel>()) {
-            if !(start <= other.nextDayToFire && other.nextDayToFire < stop &&
+            if !(other.nextDayToFire == day &&
                  other.name != alarmName && !other.isOverridden && other.name != Once) {
                 continue
             }
@@ -355,27 +343,28 @@ class AlarmLogic {
             } else if other.alarmType > alarm.alarmType {
                 try other.unschedule()
                 other.isOverridden = true
-                other.nextDayToFire = try getNextDayToFire(nextDay(now), other)
+                other.nextDayToFire = try getNextDayToFire(startOfDayAfter, other)
             } else if other.isEnabled {
                 alarm.isOverridden = true
-                alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
+                alarm.nextDayToFire = try getNextDayToFire(startOfDayAfter, alarm)
             }
         }
         
         //if this alarm falls on a saturday or sunday which hasn't been scheduled yet, and is lower priority, and if the saturday/sunday alarm is enabled then override this alarm
-        let dayOfWeek = allDaysOfWeek[Calendar.current.component(.weekday, from: alarm.nextDayToFire) - 1]
+        let dayOfWeek = AlarmLogic.dayOfWeek(alarm.nextDayToFire)
+        let startOfDayAfterWeekendDay = AlarmModel.date(AlarmModel.addingDays(alarm.nextDayToFire, 1))
         if dayOfWeek == Saturday && alarm.alarmType > .saturday {
             try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
                 other.isEnabled && other.isShabbos && !other.isExtra })).forEach { _ in
                 alarm.isOverridden = true
-                alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
+                alarm.nextDayToFire = try getNextDayToFire(startOfDayAfterWeekendDay, alarm)
             }
         } else if dayOfWeek == Sunday && alarm.alarmType > .national && alarm.alarmType != .weekDay {
             try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate { other in
                 other.isEnabled && other.isWeekDay && !other.isExtra })).forEach { other in
                     if other.daysOfWeek.contains(dayOfWeek) {
                         alarm.isOverridden = true
-                        alarm.nextDayToFire = try getNextDayToFire(nextDay(now), alarm)
+                        alarm.nextDayToFire = try getNextDayToFire(startOfDayAfterWeekendDay, alarm)
                     }
                 }
         }
@@ -545,19 +534,19 @@ class AlarmLogic {
     
     //TODO share more with getNextDayToFire?
     public static func initializeAlarms(_ now: Date, _ modelContext: ModelContext) async throws {
-        let chagim = getChagim(now)
+        let chagim = getChagim(onOrAfter: AlarmModel.day(now))
         
-        let nextCholHamoed = chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!.hdate.greg()
+        let nextCholHamoed = day(chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!)
         insert(modelContext, AlarmModel(name: CholHamoed, alarmType: .cholHamoed, hour: 6, minute: 30,
             maybeDayToFire: nextCholHamoed, nextDayToFire: nextCholHamoed, isEnabled: false, repetitions: 0))
         
-        let nextRoshChodesh = chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!.hdate.greg()
+        let nextRoshChodesh = day(chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!)
         insert(modelContext, AlarmModel(name: RoshChodesh, alarmType: .roshChodesh, hour: 6, minute: 15,
            maybeDayToFire: nextRoshChodesh, nextDayToFire: nextRoshChodesh, isEnabled: false, repetitions: 0))
         
         for chag in chagim.filter({ $0.flags.contains(.SPECIAL_SHABBAT)}) {
             insert(modelContext, AlarmModel( name: chag.desc, alarmType: .specialSaturday, hour: 7, minute: 30,
-               maybeDayToFire: chag.hdate.greg(), nextDayToFire: chag.hdate.greg(), isEnabled: false))
+               maybeDayToFire: day(chag), nextDayToFire: day(chag), isEnabled: false))
         }
         
         for chag in chagim.filter({ $0.flags.contains(.CHAG)}) {
@@ -574,7 +563,7 @@ class AlarmLogic {
             } else if chag.desc.starts(with: "Rosh Hashana") {
                 hour = 6
             }
-            insert(modelContext, AlarmModel(name: chag.desc, alarmType: .yomTov, hour: hour, minute: minute, maybeDayToFire: chag.hdate.greg(), nextDayToFire: chag.hdate.greg(), isEnabled: false))
+            insert(modelContext, AlarmModel(name: chag.desc, alarmType: .yomTov, hour: hour, minute: minute, maybeDayToFire: day(chag), nextDayToFire: day(chag), isEnabled: false))
         }
 
         for chag in chagim.filter({ $0.flags.isDisjoint(with: [.CHOL_HAMOED, .ROSH_CHODESH, .SPECIAL_SHABBAT, .CHAG]) }) {
@@ -585,12 +574,12 @@ class AlarmLogic {
                 minute = 15
                 alarmType = .fast
             }
-            insert(modelContext, AlarmModel(name: chag.desc, alarmType: alarmType, hour: hour, minute: minute, maybeDayToFire: chag.hdate.greg(), nextDayToFire: chag.hdate.greg(), isEnabled: false, repetitions: 0))
+            insert(modelContext, AlarmModel(name: chag.desc, alarmType: alarmType, hour: hour, minute: minute, maybeDayToFire: day(chag), nextDayToFire: day(chag), isEnabled: false, repetitions: 0))
         }
         
         for national in UsHolidays.allCases {
             do {
-                let d = try legalHoliday(now, national.rawValue)
+                let d = try legalHoliday(onOrAfter: AlarmModel.addingDays(AlarmModel.day(now), 1), national.rawValue)
                 insert(modelContext, AlarmModel(name: national.rawValue, alarmType: .national, hour: 7, minute: 0,
                     maybeDayToFire: d, nextDayToFire: d, isEnabled: false, repetitions: 0))
             } catch {
@@ -599,14 +588,16 @@ class AlarmLogic {
         }
         
         let weekDays = Set(allDaysOfWeek).subtracting([Saturday])
-        let alarm = AlarmModel(name: AlarmModel.nameFromDaysOfWeek(weekDays), alarmType: .weekDay, daysOfWeek: weekDays, hour: 6, minute: 30, maybeDayToFire: now, nextDayToFire: now, isEnabled: false, repetitions: 0)
+        let alarm = AlarmModel(name: AlarmModel.nameFromDaysOfWeek(weekDays), alarmType: .weekDay, daysOfWeek: weekDays, hour: 6, minute: 30, maybeDayToFire: AlarmModel.day(now), nextDayToFire: AlarmModel.day(now), isEnabled: false, repetitions: 0)
         modelContext.insert(alarm)
         
-        let nextSaturday = try getNextDayOfWeek(now, Set([Saturday]), 8, 0)
-        insert(modelContext, AlarmModel(name: Saturday, alarmType: .saturday, daysOfWeek: Set([Saturday]), hour: 8, minute: 0, maybeDayToFire: nextSaturday, nextDayToFire: nextSaturday, isEnabled: false))
+        let saturday = AlarmModel(name: Saturday, alarmType: .saturday, daysOfWeek: Set([Saturday]), hour: 8, minute: 0, maybeDayToFire: AlarmModel.never, nextDayToFire: AlarmModel.never, isEnabled: false)
+        saturday.maybeDayToFire = try getNextDayToFire(now, saturday)
+        saturday.nextDayToFire = saturday.maybeDayToFire
+        insert(modelContext, saturday)
 
         insert(modelContext, AlarmModel(name: Once, alarmType: .explicit, hour: 8, minute: 0,
-            maybeDayToFire: now, nextDayToFire: now, isEnabled: false))
+            maybeDayToFire: AlarmModel.day(now), nextDayToFire: AlarmModel.day(now), isEnabled: false))
         
         printScheduledAlarms()
     }

@@ -26,8 +26,11 @@ struct YekkyOhneLekkyApp: App {
             let storeURL = applicationSupportURL.appending(path: "default.store")
             
             do {
-//                try FileManager.default.copyItem(at: storeURL, to: storeURL.appending(path: "bak")) //TODO figure out why it still fails
+//                try FileManager.default.copyItem(at: storeURL, to: storeURL.appending(path: "bak")) //reason=Can't find or automatically infer mapping model for migration, NSUnderlyingError=0x600000ca9380 {Error Domain=NSCocoaErrorDomain Code=134190 "(null)" UserInfo={entity=AlarmModel, property=nextDayToFire, reason=Source and destination attribute types are incompatible}}
                 try FileManager.default.removeItem(at: storeURL)
+                //sqlite keeps uncommitted pages beside the store; left behind, they can stop the new store from opening
+                try? FileManager.default.removeItem(at: URL(filePath: storeURL.path() + "-wal"))
+                try? FileManager.default.removeItem(at: URL(filePath: storeURL.path() + "-shm"))
                 container = try ModelContainer(for: AlarmModel.self, AlarmLogger.AlarmLog.self)
                 AlarmLogger.shared.error("Remove persistence store")
                 showAlert = true
@@ -77,7 +80,7 @@ struct YekkyOhneLekkyApp: App {
 
 enum BackgroundRefresh {
     nonisolated static let identifier = "YekkyOhneLekky.refresh"
-    nonisolated static let interval = Duration.seconds(60 * 60)
+    nonisolated static let interval = Duration.seconds(3 * 60 * 60)
     
     nonisolated static func submit() {
         let request = BGAppRefreshTaskRequest(identifier: identifier)

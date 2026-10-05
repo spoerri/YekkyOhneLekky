@@ -12,28 +12,24 @@ struct AlarmListView: View {
     @State private var showAlert = false
 
     private var sortedAlarms: [AlarmModel] {
-        alarms.sorted { adjusted($0) < adjusted($1) }
+        alarms.sorted { (adjusted($0), $0.name) < (adjusted($1), $1.name) }
     }
 
-    private func adjusted(_ a: AlarmModel) -> Double {
-        do {
-            var d: Date = try a.getAlarmDateAndTime()
-            let today = Testable.Date()
-            if a.name == AlarmLogic.Once {
-                return 0
-            }
-            if d < today { //for disabled and things that don't come every year, e.g. sometimes vayakehl&Pekudei are not a double parsha
-                if a.alarmType == .roshChodesh {
-                    d = Calendar.current.date(byAdding: .day, value: 7, to: today)! //after week days
-                } else if !a.isRecurring() {
-                    d = Calendar.current.date(byAdding: .year, value: 2, to: d)!
-                }
-            }
-            return d.timeIntervalSince1970
-        } catch {
-            AlarmLogger.shared.error("Couldn't getAlarmDateAndTime")
-            return 0
+    //the day to sort by
+    private func adjusted(_ a: AlarmModel) -> String {
+        if a.name == AlarmLogic.Once {
+            return ""
         }
+        let today = AlarmModel.day(Testable.Date())
+        var day = a.nextDayToFire
+        if day < today { //for disabled and things that don't come every year, e.g. sometimes vayakehl&Pekudei are not a double parsha
+            if a.alarmType == .roshChodesh {
+                day = AlarmModel.addingDays(today, 7) //after week days
+            } else if !a.isRecurring() {
+                day = AlarmModel.addingYears(day, 2)
+            }
+        }
+        return day
     }
     
     var body: some View {
@@ -82,7 +78,7 @@ struct AlarmListView: View {
                     AlarmLogger.shared.error("Failed to initialize: \(error)")
                     showAlert = true
                 }
-                for alarm in alarms.filter({$0.nextDayToFire < now && $0.isExplicit && $0.name != AlarmLogic.Once}) {
+                for alarm in alarms.filter({$0.nextDayToFire < AlarmModel.day(now) && $0.isExplicit && $0.name != AlarmLogic.Once}) {
                     modelContext.delete(alarm)
                 }
                 await AlarmLogic.scheduleNext(now, modelContext)

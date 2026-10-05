@@ -22,8 +22,8 @@ struct EditAlarmView: View {
     @State private var isOverridden: Bool
     @State private var isExtra: Bool
     @State private var isGrouped: Bool
-    @State private var maybeDayToFire: Date
-    @State private var nextDayToFire: Date
+    @State private var maybeDayToFire: String
+    @State private var nextDayToFire: String
     @State private var daysOfWeek: Set<String>
     @State private var selectedSound: String?
     
@@ -73,15 +73,14 @@ struct EditAlarmView: View {
             if alarmName != AlarmLogic.Once || isEnabled {
                 if alarmName == AlarmLogic.Once || alarmType == .explicit {
                     let datePickerInterceptor = Binding<Date>(
-                        get: { nextDayToFire },
+                        get: { AlarmModel.date(nextDayToFire) },
                         set: {
-                            nextDayToFire = $0
+                            nextDayToFire = AlarmModel.day($0)
                             //default to the time of the alarm to be overridden
                             if alarmName == AlarmLogic.Once {
-                                let start = Calendar.current.startOfDay(for: nextDayToFire)
-                                let stop = start + TimeInterval(60*60*24)
-                                if let existingAlarm = try? modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> {start <= $0.nextDayToFire && $0.nextDayToFire < stop && $0.name != alarmName && !$0.isOverridden})).first {
-                                    if !Calendar.current.isDate(existingAlarm.nextDayToFire, inSameDayAs: Testable.Date()) {
+                                let day = nextDayToFire
+                                if let existingAlarm = try? modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> {$0.nextDayToFire == day && $0.name != alarmName && !$0.isOverridden})).first {
+                                    if existingAlarm.nextDayToFire != AlarmModel.day(Testable.Date()) {
                                         do {
                                             selectedTime = try existingAlarm.getAlarmDateAndTime()
                                         } catch {
@@ -96,7 +95,7 @@ struct EditAlarmView: View {
                 } else {
                     HStack {
                         Text("Next date:")
-                        Text(maybeDayToFire, formatter: dateFormatter)
+                        Text(AlarmModel.date(maybeDayToFire), formatter: dateFormatter)
                             .strikethrough(isOverridden).frame(maxWidth: .infinity, alignment: .trailing)
                         //TODO show the nextDayToFire (not strikethrough) if maybeDayToFire is overridden
                         //TODO be clever about two day rosh chodesh?
@@ -198,11 +197,11 @@ struct EditAlarmView: View {
         duration = editingAlarm.duration
         repetitions = editingAlarm.repetitions
         repetitionDelay = editingAlarm.repetitionDelay
-        let day: Date
+        let day: String
         do {
             day = try AlarmLogic.getNextDayToFire(Testable.Date(), editingAlarm)
         } catch {
-            day = Testable.Date()
+            day = AlarmModel.day(Testable.Date())
             AlarmLogger.shared.error("Error editing alarm: \(error)")
         }
         maybeDayToFire = day
@@ -260,7 +259,7 @@ struct EditAlarmView: View {
 }
 
 #Preview {
-    @Previewable @State var value = AlarmModel(name: "Preview Alarm", alarmType: AlarmType.explicit, hour: 8, minute: 0, maybeDayToFire: Date(), nextDayToFire: Date())
+    @Previewable @State var value = AlarmModel(name: "Preview Alarm", alarmType: AlarmType.explicit, hour: 8, minute: 0, maybeDayToFire: AlarmModel.day(Date()), nextDayToFire: AlarmModel.day(Date()))
     EditAlarmView(editingAlarm: value)
         .modelContainer(for: AlarmModel.self, inMemory: true)
 }

@@ -14,8 +14,15 @@ enum UsHolidays: String, CaseIterable {
     case thanksgivingDay = "Thanksgiving"
     case christmasDay = "Xmas"
 
+    //yyyy-MM-dd of the holiday (as observed) in the given gregorian year
+    func day(in year: Int) throws -> String {
+        var calendar = Calendar(identifier: .gregorian) //not .current, which may be e.g. hebrew
+        calendar.timeZone = Calendar.current.timeZone
+        return AlarmModel.day(try date(in: year, using: calendar))
+    }
+    
     // Function to calculate the date of the holiday for a given year
-    func date(in year: Int, using calendar: Calendar = .current) throws -> Date {
+    private func date(in year: Int, using calendar: Calendar) throws -> Date {
         var components = DateComponents()
         components.year = year
         
