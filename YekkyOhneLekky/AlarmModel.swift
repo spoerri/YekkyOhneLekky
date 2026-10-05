@@ -98,8 +98,8 @@ class AlarmModel {
         return fullDate
     }
     
-    func isOnOrBefore(_ date: Date) -> Bool {
-        return maybeDayToFire < date || Calendar.current.isDate(maybeDayToFire, inSameDayAs: date)
+    func isDue(_ now: Date) throws -> Bool {
+        return try getAlarmDateAndTime(maybeDayToFire) <= now
     }
     
     func unschedule() throws {

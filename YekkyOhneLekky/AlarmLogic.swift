@@ -384,7 +384,7 @@ class AlarmLogic {
     }
     
     public class func reschedule(_ now: Date, _ modelContext: ModelContext, _ alarm: AlarmModel) async throws {        
-        if (alarm.isOnOrBefore(now)) {
+        if try alarm.isDue(now) {
             alarm.maybeDayToFire = try getNextDayToFire(now, alarm)
             alarm.nextDayToFire = alarm.maybeDayToFire
             try modelContext.save()

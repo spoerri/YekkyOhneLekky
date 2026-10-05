@@ -91,6 +91,24 @@ struct YekkyOhneLekkyTests {
         #expect(try roshChodeshAlarm.getAlarmDateAndTime() == at(7, 15, on: nextRoshChodesh))
     }
     
+    @Test func rescheduleBeforeTodaysAlarmLeavesItAlone() async throws {
+        let tuesday = ISO8601DateFormatter().date(from:"2026-07-14T05:00:00Z")! //in a week in which wednesday is rosh chodesh
+        let wednesday = Calendar.current.date(byAdding: .day, value: 1, to: tuesday)!
+        
+        let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:7, minute:15, maybeDayToFire: tuesday, nextDayToFire: tuesday, duration: nil, repetitions: 0)
+        context.insert(roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(tuesday, roshChodeshAlarm)
+        roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
+        try await AlarmLogic.saveAlarm(tuesday, context, roshChodeshAlarm, Set(), nil)
+        #expect(mock.scheduled.values.elementsEqual([at(7, 15, on: wednesday)]))
+        
+        //the hourly background refresh runs shortly before the alarm, on its day
+        try await AlarmLogic.reschedule(at(6, 30, on: wednesday), context, roshChodeshAlarm)
+        await AlarmLogic.scheduleNext(at(6, 30, on: wednesday), context)
+        #expect(try roshChodeshAlarm.getAlarmDateAndTime() == at(7, 15, on: wednesday))
+        #expect(mock.scheduled.values.elementsEqual([at(7, 15, on: wednesday)]))
+    }
+    
     @Test func onlyOneAlarmModelScheduledAtATime() async throws {
         let monday = ISO8601DateFormatter().date(from:"2026-08-03T05:00:00Z")!
         let tuesday = Calendar.current.date(byAdding: .day, value: 1, to: monday)!
