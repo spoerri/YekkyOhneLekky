@@ -538,11 +538,11 @@ class AlarmLogic {
         
         let nextCholHamoed = day(chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!)
         insert(modelContext, AlarmModel(name: CholHamoed, alarmType: .cholHamoed, hour: 6, minute: 30,
-            maybeDayToFire: nextCholHamoed, nextDayToFire: nextCholHamoed, isEnabled: false, repetitions: 0))
+            maybeDayToFire: nextCholHamoed, nextDayToFire: nextCholHamoed, isEnabled: false, duration: nil, repetitions: 0))
         
         let nextRoshChodesh = day(chagim.first{ $0.flags.contains(.ROSH_CHODESH)}!)
         insert(modelContext, AlarmModel(name: RoshChodesh, alarmType: .roshChodesh, hour: 6, minute: 15,
-           maybeDayToFire: nextRoshChodesh, nextDayToFire: nextRoshChodesh, isEnabled: false, repetitions: 0))
+           maybeDayToFire: nextRoshChodesh, nextDayToFire: nextRoshChodesh, isEnabled: false, duration: nil, repetitions: 0))
         
         for chag in chagim.filter({ $0.flags.contains(.SPECIAL_SHABBAT)}) {
             insert(modelContext, AlarmModel( name: chag.desc, alarmType: .specialSaturday, hour: 7, minute: 30,
@@ -574,22 +574,25 @@ class AlarmLogic {
                 minute = 15
                 alarmType = .fast
             }
-            insert(modelContext, AlarmModel(name: chag.desc, alarmType: alarmType, hour: hour, minute: minute, maybeDayToFire: day(chag), nextDayToFire: day(chag), isEnabled: false, repetitions: 0))
+            insert(modelContext, AlarmModel(name: chag.desc, alarmType: alarmType, hour: hour, minute: minute, maybeDayToFire: day(chag), nextDayToFire: day(chag), isEnabled: false, duration: nil, repetitions: 0))
         }
         
         for national in UsHolidays.allCases {
             do {
                 let d = try legalHoliday(onOrAfter: AlarmModel.addingDays(AlarmModel.day(now), 1), national.rawValue)
                 insert(modelContext, AlarmModel(name: national.rawValue, alarmType: .national, hour: 7, minute: 0,
-                    maybeDayToFire: d, nextDayToFire: d, isEnabled: false, repetitions: 0))
+                    maybeDayToFire: d, nextDayToFire: d, isEnabled: false, duration: nil, repetitions: 0))
             } catch {
                 AlarmLogger.shared.error("Couldn't initialize legal holiday: \(error)")
             }
         }
         
-        let weekDays = Set(allDaysOfWeek).subtracting([Saturday])
-        let alarm = AlarmModel(name: AlarmModel.nameFromDaysOfWeek(weekDays), alarmType: .weekDay, daysOfWeek: weekDays, hour: 6, minute: 30, maybeDayToFire: AlarmModel.day(now), nextDayToFire: AlarmModel.day(now), isEnabled: false, repetitions: 0)
-        modelContext.insert(alarm)
+        let weekDay = AlarmType.weekDay.rawValue
+        if try modelContext.fetchCount(FetchDescriptor(predicate: #Predicate<AlarmModel> { $0.alarmTypeRaw == weekDay && $0.name != Saturday })) == 0 {
+            let weekDays = Set(allDaysOfWeek).subtracting([Saturday])
+            let alarm = AlarmModel(name: AlarmModel.nameFromDaysOfWeek(weekDays), alarmType: .weekDay, daysOfWeek: weekDays, hour: 6, minute: 30, maybeDayToFire: AlarmModel.day(now), nextDayToFire: AlarmModel.day(now), isEnabled: false, duration: nil, repetitions: 0)
+            modelContext.insert(alarm)
+        }
         
         let saturday = AlarmModel(name: Saturday, alarmType: .saturday, daysOfWeek: Set([Saturday]), hour: 8, minute: 0, maybeDayToFire: AlarmModel.never, nextDayToFire: AlarmModel.never, isEnabled: false)
         saturday.maybeDayToFire = try getNextDayToFire(now, saturday)

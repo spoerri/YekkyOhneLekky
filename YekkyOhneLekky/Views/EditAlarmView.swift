@@ -111,15 +111,15 @@ struct EditAlarmView: View {
             if alarmName != AlarmLogic.Once || isEnabled {
                 DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
             }
-            if alarmType == .explicit {
-                Toggle("Extra (e.g. for a nap)", isOn: $isExtra)
-            }
             Toggle("Enabled", isOn: $isEnabled)
                 .onChange(of: isEnabled, initial: true) {
                     if alarmName == AlarmLogic.Once {
                         isGrouped = isEnabled
                     }
                 }
+            if alarmType == .explicit {
+                Toggle("Extra (e.g. for a nap)", isOn: $isExtra)
+            }
             Picker("Duration", selection: $duration) {
                 Text("30 seconds").tag(TimeInterval(30))
                 Text("1 minute").tag(TimeInterval(60))
