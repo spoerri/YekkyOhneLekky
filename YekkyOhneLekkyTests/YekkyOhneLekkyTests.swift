@@ -123,6 +123,27 @@ struct YekkyOhneLekkyTests {
         #expect(mock.scheduled.values.elementsEqual([at(8, 0, on: sunday)]))
     }
     
+    @Test func sundayBeatsRoshChodeshWeeksAhead() async throws {
+        let saturday = ISO8601DateFormatter().date(from:"2026-09-19T13:00:00Z")! //the next rosh chodesh is sunday 2026-10-11, three weeks away
+        let sunday = Calendar.current.date(byAdding: .day, value: 1, to: saturday)!
+        
+        let sundayAlarm = AlarmModel(name: "Sunday", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Sunday"]), hour:8, minute:0, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
+        context.insert(sundayAlarm)
+        sundayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, sundayAlarm)
+        sundayAlarm.nextDayToFire = sundayAlarm.maybeDayToFire
+        try await AlarmLogic.saveAlarm(saturday, context, sundayAlarm, Set(), nil)
+        #expect(sundayAlarm.nextDayToFire == AlarmModel.day(sunday)) //its next occurrence is this week, before rosh chodesh
+        
+        let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:6, minute:15, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
+        context.insert(roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, roshChodeshAlarm)
+        roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
+        try await AlarmLogic.saveAlarm(saturday, context, roshChodeshAlarm, Set(), nil)
+        
+        #expect(!sundayAlarm.isOverridden)
+        #expect(roshChodeshAlarm.isOverridden)
+    }
+    
     @Test func rescheduleBeforeTodaysAlarmLeavesItAlone() async throws {
         let tuesday = ISO8601DateFormatter().date(from:"2026-07-14T05:00:00Z")! //in a week in which wednesday is rosh chodesh
         let wednesday = Calendar.current.date(byAdding: .day, value: 1, to: tuesday)!

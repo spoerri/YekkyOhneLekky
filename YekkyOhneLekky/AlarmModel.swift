@@ -7,6 +7,7 @@ import OSLog
 
 @Model
 class AlarmModel {
+    public static nonisolated let Sunday = "Sunday"
     @Attribute(.unique) var name: String
     var ids: Array<UUID>
     var hour: Int
@@ -185,6 +186,15 @@ class AlarmModel {
     
     func isRecurring() -> Bool {
         return alarmType == .weekDay || alarmType == .saturday || alarmType == .roshChodesh
+    }
+    
+    //independent of whether the alarms are enabled etc
+    func takesPriorityOver(_ other: AlarmModel) -> Bool {
+        return priority() < other.priority()
+    }
+    
+    private func priority() -> Int {
+        return daysOfWeek == Set([AlarmModel.Sunday]) ? AlarmType.national.rawValue : alarmTypeRaw
     }
 }
 
