@@ -188,6 +188,7 @@ class AlarmModel {
     }
 }
 
+//the Int values are also priorities: lower numbers win
 enum AlarmType: Int, Codable, Comparable {
     case explicit = 0
     case yomTov = 10

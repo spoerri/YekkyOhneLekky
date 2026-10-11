@@ -93,6 +93,36 @@ struct YekkyOhneLekkyTests {
         #expect(try roshChodeshAlarm.getAlarmDateAndTime() == at(7, 15, on: nextRoshChodesh))
     }
     
+    @Test func sundayBeatsRoshChodesh() async throws {
+        let saturday = ISO8601DateFormatter().date(from:"2026-10-10T13:00:00Z")! //sunday 2026-10-11 is rosh chodesh cheshvan
+        let sunday = Calendar.current.date(byAdding: .day, value: 1, to: saturday)!
+        
+        let sundayAlarm = AlarmModel(name: "Sun", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Sunday"]), hour:8, minute:0, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
+        context.insert(sundayAlarm)
+        sundayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, sundayAlarm)
+        sundayAlarm.nextDayToFire = sundayAlarm.maybeDayToFire
+        try await AlarmLogic.saveAlarm(saturday, context, sundayAlarm, Set(), nil)
+        #expect(mock.scheduled.values.elementsEqual([at(8, 0, on: sunday)]))
+        
+        let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:6, minute:15, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
+        context.insert(roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, roshChodeshAlarm)
+        roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
+        #expect(roshChodeshAlarm.maybeDayToFire == AlarmModel.day(sunday))
+        try await AlarmLogic.saveAlarm(saturday, context, roshChodeshAlarm, Set(), nil)
+        
+        //sunday has national holiday precedence, so it beats rosh chodesh, whichever is saved first
+        #expect(!sundayAlarm.isOverridden)
+        #expect(roshChodeshAlarm.isOverridden)
+        #expect(mock.scheduled.values.elementsEqual([at(8, 0, on: sunday)]))
+        
+        //and saving the sunday alarm again keeps it that way
+        try await AlarmLogic.saveAlarm(saturday, context, sundayAlarm, Set(["Sunday"]), nil)
+        #expect(!sundayAlarm.isOverridden)
+        #expect(roshChodeshAlarm.isOverridden)
+        #expect(mock.scheduled.values.elementsEqual([at(8, 0, on: sunday)]))
+    }
+    
     @Test func rescheduleBeforeTodaysAlarmLeavesItAlone() async throws {
         let tuesday = ISO8601DateFormatter().date(from:"2026-07-14T05:00:00Z")! //in a week in which wednesday is rosh chodesh
         let wednesday = Calendar.current.date(byAdding: .day, value: 1, to: tuesday)!

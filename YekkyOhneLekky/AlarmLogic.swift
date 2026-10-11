@@ -311,10 +311,18 @@ class AlarmLogic {
     
     private class func unoverride(_ now: Date, _ modelContext: ModelContext, _ day: String) async throws {
         //an overridden alarm's nextDayToFire was moved past the overridden day, so match on maybeDayToFire, which still has it
-        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.maybeDayToFire == day && other.maybeDayToFire != other.nextDayToFire })).sorted(using: SortDescriptor(\.alarmTypeRaw)).first {
+        if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.maybeDayToFire == day && other.maybeDayToFire != other.nextDayToFire })).min(by: { priority($0, on: day) < priority($1, on: day) }) {
             overriddenAlarm.nextDayToFire = overriddenAlarm.maybeDayToFire 
             await schedule(now, modelContext, overriddenAlarm)
         }
+    }
+    
+    //the alarm's precedence on the given day: a weekday alarm firing on a Sunday has the same precedence as national holidays
+    private static func priority(_ alarm: AlarmModel, on day: String) -> AlarmType {
+        if alarm.alarmType == .weekDay && dayOfWeek(day) == Sunday {
+            return .national
+        }
+        return alarm.alarmType
     }
     
     private class func overrideAsAppropriate(_ now: Date, _ modelContext: ModelContext, _ alarm: AlarmModel) throws {
@@ -340,7 +348,7 @@ class AlarmLogic {
             }
             if other.isExtra {
                 //extra alarms neither override nor are overridden
-            } else if other.alarmType > alarm.alarmType {
+            } else if priority(other, on: day) > priority(alarm, on: day) {
                 try other.unschedule()
                 other.nextDayToFire = try getNextDayToFire(startOfDayAfter, other)
             } else if other.isEnabled {
@@ -426,6 +434,11 @@ class AlarmLogic {
                     AlarmLogger.shared.info("surprising unsched \(date.formatted())")
                 }
                 try Manager.cancel(id: alarm.id)
+            }
+            //and the other AlarmModels forget the ids that just came out, so they don't look scheduled
+            let remaining = Set(try Manager.alarms.map { $0.id })
+            for alarm in all where alarm !== next && !alarm.ids.isEmpty {
+                alarm.ids.removeAll(where: { !remaining.contains($0) })
             }
             
             guard let next = next else {
