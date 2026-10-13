@@ -78,10 +78,6 @@ class AlarmModel {
         return AlarmModel.day(gregorian.date(byAdding: .day, value: n, to: date(day))!)
     }
     
-    nonisolated static func addingYears(_ day: String, _ n: Int) -> String {
-        return AlarmModel.day(gregorian.date(byAdding: .year, value: n, to: date(day))!)
-    }
-    
     //start of that day in local time; only for handing a day to APIs that need a Date
     nonisolated static func date(_ day: String) -> Date {
         let calendar = gregorian

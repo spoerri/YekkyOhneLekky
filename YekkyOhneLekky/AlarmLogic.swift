@@ -133,18 +133,17 @@ class AlarmLogic {
         return allDaysOfWeek[Calendar.current.component(.weekday, from: AlarmModel.date(day)) - 1]
     }
         
-    public class func getNextDayToFire(_ now: Date, _ alarm: AlarmModel) throws -> String {
-        let today = AlarmModel.day(now)
+    //daysOfWeek overrides the alarm's own, e.g. for days picked in EditAlarmView but not saved yet
+    public class func getNextDayToFire(_ start: String, _ alarm: AlarmModel, daysOfWeek: Set<String>? = nil) throws -> String {
+        let daysOfWeek = daysOfWeek ?? alarm.daysOfWeek
         if alarm.name == Once {
-            return today
+            return start
         }
         if alarm.alarmType == .explicit {
             return alarm.nextDayToFire
         }
-        let alarmTimeToday = try alarm.getAlarmDateAndTime(today)
-        let start = now > alarmTimeToday ? AlarmModel.addingDays(today, 1) : today
-        if !alarm.daysOfWeek.isEmpty {
-            return try getNextDayOfWeek(onOrAfter: start, alarm.daysOfWeek)
+        if !daysOfWeek.isEmpty {
+            return try getNextDayOfWeek(onOrAfter: start, daysOfWeek)
         }
         if alarm.alarmType == .national {
             return try legalHoliday(onOrAfter: start, alarm.name)
@@ -188,22 +187,22 @@ class AlarmLogic {
     public class func saveAlarm(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel, _ originalDaysOfWeek: Set<String>, _ originalDayToFire: String?) async throws {
         
         if editingAlarm.alarmType == .weekDay {
-            try await saveWeekDayAlarms(now, modelContext, editingAlarm, originalDaysOfWeek)
+            try await saveWeekDayAlarms(modelContext, editingAlarm, originalDaysOfWeek)
             if isHighPriorityWeekday(editingAlarm) && !editingAlarm.isEnabled, let originalDayToFire = originalDayToFire {
                 try modelContext.save() //so that fetch gets the up-to-date values - TODO confirm that's required
-                try await unoverride(now, modelContext, originalDayToFire)
+                try await unoverride(modelContext, originalDayToFire)
             }
         } else {
             if editingAlarm.name == AlarmLogic.Once && editingAlarm.isEnabled {
-                try await saveNewOneOffAlarm(now, modelContext, editingAlarm)
+                try await saveNewOneOffAlarm(modelContext, editingAlarm)
             } else {
-                try await saveOtherAlarmsInGroup(now, modelContext, editingAlarm)
-                try await saveEditingAlarm(now, modelContext, editingAlarm)
+                try await saveOtherAlarmsInGroup(modelContext, editingAlarm)
+                try await saveEditingAlarm(modelContext, editingAlarm)
             }
             
             if let originalDayToFire = originalDayToFire {
                 try modelContext.save() //so that fetch gets the up-to-date values - TODO confirm that's required
-                try await unoverride(now, modelContext, originalDayToFire)
+                try await unoverride(modelContext, originalDayToFire)
             }
         }
         
@@ -212,7 +211,7 @@ class AlarmLogic {
         printScheduledAlarms()
     }
     
-    private static func saveOtherAlarmsInGroup(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
+    private static func saveOtherAlarmsInGroup( _ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
         if editingAlarm.isGrouped {
             let alarms = Set(try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { $0.isGrouped })))
             for alarm in alarms {
@@ -223,13 +222,13 @@ class AlarmLogic {
                         alarm.minute = editingAlarm.minute
                         alarm.isEnabled = editingAlarm.isEnabled
                     }
-                    try updateOverrides(now, modelContext, alarm)
+                    try updateOverrides(modelContext, alarm)
                 }
             }
         }
     }
     
-    private static func saveEditingAlarm(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
+    private static func saveEditingAlarm(_ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
         if editingAlarm.name != AlarmLogic.Once && editingAlarm.alarmType == AlarmType.explicit {
             let alarmName = editingAlarm.nextDayToFire
             if alarmName != editingAlarm.name {
@@ -240,7 +239,7 @@ class AlarmLogic {
                 editingAlarm.name = alarmName
             }
         }
-        try updateOverrides(now, modelContext, editingAlarm)
+        try updateOverrides(modelContext, editingAlarm)
     }
     
     public class func disablePastOneOffs(_ now: Date, _ modelContext: ModelContext?) throws {
@@ -254,7 +253,7 @@ class AlarmLogic {
         }
     }
     
-    private static func saveWeekDayAlarms(_ now:Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel, _ originalDaysOfWeek: Set<String>) async throws {
+    private static func saveWeekDayAlarms(_ modelContext: ModelContext, _ editingAlarm: AlarmModel, _ originalDaysOfWeek: Set<String>) async throws {
         if editingAlarm.daysOfWeek.isEmpty {
             editingAlarm.daysOfWeek = originalDaysOfWeek
             throw AlarmError.ugh
@@ -270,7 +269,7 @@ class AlarmLogic {
                 maybeDayToFire: AlarmModel.never,
                 nextDayToFire: AlarmModel.never
             )
-            newAlarm.maybeDayToFire = try getNextDayToFire(now, newAlarm)
+            newAlarm.maybeDayToFire = try getNextDayToFire(editingAlarm.maybeDayToFire, newAlarm)
             newAlarm.nextDayToFire = newAlarm.maybeDayToFire
             newAlarm.copyConfigFrom(editingAlarm)
             newAlarm.isEnabled = false
@@ -290,12 +289,12 @@ class AlarmLogic {
             }
         }
         editingAlarm.name = AlarmModel.nameFromDaysOfWeek(editingAlarm.daysOfWeek)
-        editingAlarm.maybeDayToFire = try getNextDayToFire(now, editingAlarm)
+        editingAlarm.maybeDayToFire = try getNextDayToFire(editingAlarm.maybeDayToFire, editingAlarm)
         editingAlarm.nextDayToFire = editingAlarm.maybeDayToFire
-        try updateOverrides(now, modelContext, editingAlarm)
+        try updateOverrides(modelContext, editingAlarm)
     }
     
-    private static func saveNewOneOffAlarm(_ now: Date, _ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
+    private static func saveNewOneOffAlarm(_ modelContext: ModelContext, _ editingAlarm: AlarmModel) async throws {
         let newAlarm = AlarmModel(
             name: editingAlarm.isExtra ? editingAlarm.nextDayToFire + " " + editingAlarm.timeString : editingAlarm.nextDayToFire,
             alarmType: AlarmType.explicit,
@@ -308,19 +307,19 @@ class AlarmLogic {
         modelContext.insert(newAlarm)
         editingAlarm.isGrouped = false
         editingAlarm.isEnabled = false
-        try updateOverrides(now, modelContext, newAlarm)
+        try updateOverrides(modelContext, newAlarm)
     }
     
-    private class func unoverride(_ now: Date, _ modelContext: ModelContext, _ day: String) async throws {
+    private class func unoverride(_ modelContext: ModelContext, _ day: String) async throws {
         //an overridden alarm's nextDayToFire was moved past the overridden day, so match on maybeDayToFire, which still has it
         if let overriddenAlarm = try modelContext.fetch(FetchDescriptor<AlarmModel>(predicate: #Predicate<AlarmModel> { other in other.maybeDayToFire == day && other.maybeDayToFire != other.nextDayToFire && other.isEnabled && !other.isExtra })).min(by: { $0.takesPriorityOver($1) }) {
-            try updateOverrides(now, modelContext, overriddenAlarm)
+            try updateOverrides(modelContext, overriddenAlarm)
         }
     }
     
     //currently unsupported: detecting that a weekday alarm in the coming week is overridden by the second day of rosh chodesh, or by the second-and-later days of chol hamoed.
     //until this is supported, updateOverrides() needs to be called by reschedule() so that we'll get the overrides right by the day before they're needed.
-    private class func updateOverrides(_ now: Date, _ modelContext: ModelContext, _ alarm: AlarmModel) throws {
+    private class func updateOverrides(_ modelContext: ModelContext, _ alarm: AlarmModel) throws {
         if alarm.isExtra || !alarm.isEnabled {
             return
         }
@@ -334,9 +333,9 @@ class AlarmLogic {
                 if other.name == alarm.name || other.name == Once || other.isExtra || !other.isEnabled {
                     continue //other alarm can neither override nor be overridden
                 } else if other.maybeDayToFire == alarm.nextDayToFire && other.takesPriorityOver(alarm) {
-                    alarm.nextDayToFire = try getNextDayToFire(AlarmModel.date(AlarmModel.addingDays(alarm.nextDayToFire, 1)), alarm)
+                    alarm.nextDayToFire = try getNextDayToFire(AlarmModel.addingDays(alarm.nextDayToFire, 1), alarm)
                 } else if isHighPriorityWeekday(alarm) && other.daysOfWeek.isEmpty {
-                    try updateOverrides(now, modelContext, other)
+                    try updateOverrides(modelContext, other)
                 }
             }
             return
@@ -351,7 +350,7 @@ class AlarmLogic {
             }
         }
         while overridingWeekdays.contains(dayOfWeek(alarm.nextDayToFire)) {
-            alarm.nextDayToFire = try getNextDayToFire(AlarmModel.date(AlarmModel.addingDays(alarm.nextDayToFire, 1)), alarm)
+            alarm.nextDayToFire = try getNextDayToFire(AlarmModel.addingDays(alarm.nextDayToFire, 1), alarm)
         }
 
         for other in try modelContext.fetch(FetchDescriptor<AlarmModel>(sortBy: [SortDescriptor(\.maybeDayToFire)])) {
@@ -363,13 +362,13 @@ class AlarmLogic {
                 return
             } else if other.maybeDayToFire == alarm.nextDayToFire {
                 if other.takesPriorityOver(alarm) {
-                    alarm.nextDayToFire = try getNextDayToFire(AlarmModel.date(AlarmModel.addingDays(alarm.nextDayToFire, 1)), alarm)
+                    alarm.nextDayToFire = try getNextDayToFire(AlarmModel.addingDays(alarm.nextDayToFire, 1), alarm)
                     while overridingWeekdays.contains(dayOfWeek(alarm.nextDayToFire)) {
-                        alarm.nextDayToFire = try getNextDayToFire(AlarmModel.date(AlarmModel.addingDays(alarm.nextDayToFire, 1)), alarm)
+                        alarm.nextDayToFire = try getNextDayToFire(AlarmModel.addingDays(alarm.nextDayToFire, 1), alarm)
                     }
                 } else {
                     AlarmLogger.shared.info("\(alarm.name) overriding existing alarm \(other.name) on \(alarm.nextDayToFire)")
-                    try updateOverrides(now, modelContext, other)
+                    try updateOverrides(modelContext, other)
                     return
                 }
             }
@@ -382,15 +381,15 @@ class AlarmLogic {
     
     public class func reschedule(_ now: Date, _ modelContext: ModelContext, _ alarm: AlarmModel) async throws {        
         if try alarm.isDue(now) {
-            alarm.maybeDayToFire = try getNextDayToFire(now, alarm)
+            let tomorrow = AlarmModel.addingDays(AlarmModel.day(now), 1)
+            alarm.maybeDayToFire = try getNextDayToFire(tomorrow, alarm)
             alarm.nextDayToFire = alarm.maybeDayToFire
             try modelContext.save()
+            try updateOverrides(modelContext, alarm)
         } else if try alarm.ids.isEmpty || isFullyScheduled(alarm) {
             //not due yet: either waiting its turn (scheduleNext will pick it up), or already handed to AlarmKit intact
             return;
         }
-        
-        try updateOverrides(now, modelContext, alarm)
     }
     
     //Hands AlarmKit only a single AlarmModel at a time: the earliest enabled, non-overridden one that hasn't fired yet.
@@ -504,7 +503,7 @@ class AlarmLogic {
             return
         }
         let alarmConfiguration = AlarmManager.AlarmConfiguration<EmptyMetadata>(
-            schedule: Alarm.Schedule.fixed(date),
+            schedule: Alarm.Schedule.fixed(date.advanced(by: -Testable.offset)),
             attributes: attributes,
             stopIntent: ScheduleNextAlarmsIntent(),
             sound: soundConfig
@@ -528,8 +527,8 @@ class AlarmLogic {
     }
     
     //TODO share more with getNextDayToFire?
-    public static func initializeAlarms(_ now: Date, _ modelContext: ModelContext) async throws {
-        let chagim = getChagim(onOrAfter: AlarmModel.day(now))
+    public static func initializeAlarms(_ today: String, _ modelContext: ModelContext) async throws {
+        let chagim = getChagim(onOrAfter: today)
         
         let nextCholHamoed = day(chagim.first{ $0.flags.contains(.CHOL_HAMOED)}!)
         insert(modelContext, AlarmModel(name: CholHamoed, alarmType: .cholHamoed, hour: 6, minute: 30,
@@ -574,7 +573,7 @@ class AlarmLogic {
         
         for national in UsHolidays.allCases {
             do {
-                let d = try legalHoliday(onOrAfter: AlarmModel.addingDays(AlarmModel.day(now), 1), national.rawValue)
+                let d = try legalHoliday(onOrAfter: AlarmModel.addingDays(today, 1), national.rawValue)
                 insert(modelContext, AlarmModel(name: national.rawValue, alarmType: .national, hour: 7, minute: 0,
                     maybeDayToFire: d, nextDayToFire: d, isEnabled: false, duration: nil, repetitions: 0))
             } catch {
@@ -585,17 +584,17 @@ class AlarmLogic {
         let weekDay = AlarmType.weekDay.rawValue
         if try modelContext.fetchCount(FetchDescriptor(predicate: #Predicate<AlarmModel> { $0.alarmTypeRaw == weekDay && $0.name != Saturday })) == 0 {
             let weekDays = Set(allDaysOfWeek).subtracting([Saturday])
-            let alarm = AlarmModel(name: AlarmModel.nameFromDaysOfWeek(weekDays), alarmType: .weekDay, daysOfWeek: weekDays, hour: 6, minute: 30, maybeDayToFire: AlarmModel.day(now), nextDayToFire: AlarmModel.day(now), isEnabled: false, duration: nil, repetitions: 0)
+            let alarm = AlarmModel(name: AlarmModel.nameFromDaysOfWeek(weekDays), alarmType: .weekDay, daysOfWeek: weekDays, hour: 6, minute: 30, maybeDayToFire: today, nextDayToFire: today, isEnabled: false, duration: nil, repetitions: 0)
             modelContext.insert(alarm)
         }
         
         let saturday = AlarmModel(name: Saturday, alarmType: .saturday, daysOfWeek: Set([Saturday]), hour: 8, minute: 0, maybeDayToFire: AlarmModel.never, nextDayToFire: AlarmModel.never, isEnabled: false)
-        saturday.maybeDayToFire = try getNextDayToFire(now, saturday)
+        saturday.maybeDayToFire = try getNextDayToFire(today, saturday)
         saturday.nextDayToFire = saturday.maybeDayToFire
         insert(modelContext, saturday)
 
         insert(modelContext, AlarmModel(name: Once, alarmType: .explicit, hour: 8, minute: 0,
-            maybeDayToFire: AlarmModel.day(now), nextDayToFire: AlarmModel.day(now), isEnabled: false))
+            maybeDayToFire: today, nextDayToFire: today, isEnabled: false))
         
         printScheduledAlarms()
     }

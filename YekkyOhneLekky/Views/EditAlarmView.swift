@@ -110,6 +110,7 @@ struct EditAlarmView: View {
             }
             if alarmName != AlarmLogic.Once || isEnabled {
                 DatePicker("Time", selection: $selectedTime, displayedComponents: .hourAndMinute)
+                    .onChange(of: selectedTime) { updateDayToFire() }
             }
             Toggle("Enabled", isOn: $isEnabled)
                 .onChange(of: isEnabled, initial: true) {
@@ -121,11 +122,11 @@ struct EditAlarmView: View {
                 Toggle("Extra (e.g. for a nap)", isOn: $isExtra)
             }
             Picker("Duration", selection: $duration) {
-                Text("30 seconds").tag(TimeInterval(30))
-                Text("1 minute").tag(TimeInterval(60))
-                Text("2 minutes").tag(TimeInterval(120))
-                Text("4 minutes").tag(TimeInterval(240))
-                Text("8 minutes").tag(TimeInterval(480))
+                Text("30 seconds").tag(TimeInterval?(30))
+                Text("1 minute").tag(TimeInterval?(60))
+                Text("2 minutes").tag(TimeInterval?(120))
+                Text("4 minutes").tag(TimeInterval?(240))
+                Text("8 minutes").tag(TimeInterval?(480))
                 Text("15 minutes").tag(nil as TimeInterval?)
             }.pickerStyle(.menu)
             Picker("Repetitions", selection: $repetitions) {
@@ -167,6 +168,7 @@ struct EditAlarmView: View {
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
+                .onChange(of: daysOfWeek) { updateDayToFire() }
             }
         }
     }
@@ -183,30 +185,53 @@ struct EditAlarmView: View {
         isGrouped = editingAlarm.isGrouped
         daysOfWeek = editingAlarm.daysOfWeek
         
+        let time: Date
         if editingAlarm.name == AlarmLogic.Once {
-            selectedTime = Calendar.current.date(byAdding: .minute, value:1, to: Testable.Date())!
+            time = Calendar.current.date(byAdding: .minute, value: 1, to: Testable.Date())!
             isEnabled = true
-            isExtra = false
         } else {
             do {
-                selectedTime = try editingAlarm.getAlarmDateAndTime()
+                time = try editingAlarm.getAlarmDateAndTime()
             } catch {
-                selectedTime = Testable.Date()
+                time = Testable.Date()
                 AlarmLogger.shared.error("Error editing alarm: \(error)")
             }
         }
+        selectedTime = time
         duration = editingAlarm.duration
         repetitions = editingAlarm.repetitions
         repetitionDelay = editingAlarm.repetitionDelay
-        let day: String
-        do {
-            day = try AlarmLogic.getNextDayToFire(Testable.Date(), editingAlarm)
-        } catch {
-            day = AlarmModel.day(Testable.Date())
-            AlarmLogger.shared.error("Error editing alarm: \(error)")
-        }
+        let day = EditAlarmView.getNextDayToFire(time, editingAlarm, editingAlarm.daysOfWeek)
         maybeDayToFire = day
         nextDayToFire = day
+    }
+    
+    //for the "Next date:", which isn't shown for one offs: their day is picked, not worked out
+    private func updateDayToFire() {
+        if alarmType == .explicit || (alarmType == .weekDay && daysOfWeek.isEmpty) {
+            return //an empty daysOfWeek isn't saved anyway, so keep showing the last day
+        }
+        let day = EditAlarmView.getNextDayToFire(selectedTime, editingAlarm, daysOfWeek)
+        if day != maybeDayToFire {
+            maybeDayToFire = day
+            nextDayToFire = day
+            isOverridden = editingAlarm.isOverridden && day == editingAlarm.maybeDayToFire //whether it's overridden on a new day is worked out on save
+        }
+    }
+    
+    //starting today if the selected time is still to come today, otherwise tomorrow
+    private static func getNextDayToFire(_ selectedTime: Date, _ editingAlarm: AlarmModel, _ daysOfWeek: Set<String>) -> String {
+        let now = Testable.Date()
+        let today = AlarmModel.day(now)
+        let components = Calendar.current.dateComponents([.hour, .minute], from: selectedTime)
+        let selectedTimeToday = Calendar.current.date(bySettingHour: components.hour!, minute: components.minute!, second: 0, of: now)!
+        let start = selectedTimeToday > now ? today : AlarmModel.addingDays(today, 1)
+        do {
+            return try AlarmLogic.getNextDayToFire(start, editingAlarm, daysOfWeek: daysOfWeek)
+        } catch {
+            AlarmLogger.shared.error("Error editing alarm: \(error)")
+            return AlarmModel.day(Testable.Date())
+        }
     }
     
     @MainActor

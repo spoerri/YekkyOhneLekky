@@ -23,11 +23,7 @@ struct AlarmListView: View {
         let today = AlarmModel.day(Testable.Date())
         var day = a.nextDayToFire
         if day < today { //for disabled and things that don't come every year, e.g. sometimes vayakehl&Pekudei are not a double parsha
-            if a.alarmType == .roshChodesh {
-                day = AlarmModel.addingDays(today, 7) //after week days
-            } else if !a.isRecurring() {
-                day = AlarmModel.addingYears(day, 2)
-            }
+            day = AlarmModel.addingDays(today, 700)
         }
         return day
     }
@@ -78,7 +74,7 @@ struct AlarmListView: View {
             .task {
                 let now = Testable.Date()
                 do {
-                    try await AlarmLogic.initializeAlarms(now, modelContext)
+                    try await AlarmLogic.initializeAlarms(AlarmModel.day(now), modelContext)
                 } catch {
                     AlarmLogger.shared.error("Failed to initialize: \(error)")
                     showAlert = true

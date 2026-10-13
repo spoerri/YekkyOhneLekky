@@ -74,14 +74,14 @@ struct YekkyOhneLekkyTests {
         
         let weekdayAlarm = AlarmModel(name: "Wed,Thu", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Wednesday", "Thursday"]), hour:7, minute:30, maybeDayToFire: AlarmModel.day(tuesday), nextDayToFire: AlarmModel.day(tuesday), duration: nil, repetitions: 0)
         context.insert(weekdayAlarm) //in real execution initializeAlarms does this
-        weekdayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(tuesday, weekdayAlarm)
+        weekdayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(AlarmModel.day(tuesday), weekdayAlarm)
         weekdayAlarm.nextDayToFire = weekdayAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(tuesday, context, weekdayAlarm, Set(), nil)
         #expect(mock.scheduled.values.elementsEqual([at(7, 30, on: wednesday)]))
         
         let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:7, minute:15, maybeDayToFire: AlarmModel.day(tuesday), nextDayToFire: AlarmModel.day(tuesday), duration: nil, repetitions: 0)
         context.insert(roshChodeshAlarm) //in real execution initializeAlarms does this
-        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(tuesday, roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(AlarmModel.day(tuesday), roshChodeshAlarm)
         roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(tuesday, context, roshChodeshAlarm, Set(), nil)
         #expect(mock.scheduled.values.elementsEqual([at(7, 15, on: wednesday)]))
@@ -99,14 +99,14 @@ struct YekkyOhneLekkyTests {
         
         let sundayAlarm = AlarmModel(name: "Sun", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Sunday"]), hour:8, minute:0, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
         context.insert(sundayAlarm)
-        sundayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, sundayAlarm)
+        sundayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(AlarmModel.day(saturday), sundayAlarm)
         sundayAlarm.nextDayToFire = sundayAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(saturday, context, sundayAlarm, Set(), nil)
         #expect(mock.scheduled.values.elementsEqual([at(8, 0, on: sunday)]))
         
         let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:6, minute:15, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
         context.insert(roshChodeshAlarm)
-        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(AlarmModel.day(saturday), roshChodeshAlarm)
         roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
         #expect(roshChodeshAlarm.maybeDayToFire == AlarmModel.day(sunday))
         try await AlarmLogic.saveAlarm(saturday, context, roshChodeshAlarm, Set(), nil)
@@ -129,14 +129,14 @@ struct YekkyOhneLekkyTests {
         
         let sundayAlarm = AlarmModel(name: "Sunday", alarmType: AlarmType.weekDay, daysOfWeek: Set(["Sunday"]), hour:8, minute:0, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
         context.insert(sundayAlarm)
-        sundayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, sundayAlarm)
+        sundayAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(AlarmModel.day(saturday), sundayAlarm)
         sundayAlarm.nextDayToFire = sundayAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(saturday, context, sundayAlarm, Set(), nil)
         #expect(sundayAlarm.nextDayToFire == AlarmModel.day(sunday)) //its next occurrence is this week, before rosh chodesh
         
         let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:6, minute:15, maybeDayToFire: AlarmModel.day(saturday), nextDayToFire: AlarmModel.day(saturday), duration: nil, repetitions: 0)
         context.insert(roshChodeshAlarm)
-        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(saturday, roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(AlarmModel.day(saturday), roshChodeshAlarm)
         roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(saturday, context, roshChodeshAlarm, Set(), nil)
         
@@ -150,7 +150,7 @@ struct YekkyOhneLekkyTests {
         
         let roshChodeshAlarm = AlarmModel(name: "Rosh Chodesh", alarmType: AlarmType.roshChodesh, daysOfWeek: Set(), hour:7, minute:15, maybeDayToFire: AlarmModel.day(tuesday), nextDayToFire: AlarmModel.day(tuesday), duration: nil, repetitions: 0)
         context.insert(roshChodeshAlarm)
-        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(tuesday, roshChodeshAlarm)
+        roshChodeshAlarm.maybeDayToFire = try AlarmLogic.getNextDayToFire(AlarmModel.day(tuesday), roshChodeshAlarm)
         roshChodeshAlarm.nextDayToFire = roshChodeshAlarm.maybeDayToFire
         try await AlarmLogic.saveAlarm(tuesday, context, roshChodeshAlarm, Set(), nil)
         #expect(mock.scheduled.values.elementsEqual([at(7, 15, on: wednesday)]))
