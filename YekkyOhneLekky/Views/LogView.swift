@@ -7,7 +7,7 @@ import SwiftData
 struct LogView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query private var logs: [AlarmLogger.AlarmLog]
+    @Query(sort: \AlarmLogger.AlarmLog.date, order: .reverse) private var logs: [AlarmLogger.AlarmLog]
 //    let logs: [OSLogEntryLog]
 
     init() {

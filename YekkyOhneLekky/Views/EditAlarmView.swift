@@ -15,7 +15,7 @@ struct EditAlarmView: View {
     @State private var alarmName: String
     @State private var alarmType: AlarmType
     @State private var selectedTime: Date
-    @State private var duration: TimeInterval?
+    @State private var duration: TimeInterval
     @State private var repetitions: Int
     @State private var repetitionDelay: TimeInterval
     @State private var isEnabled: Bool
@@ -123,11 +123,11 @@ struct EditAlarmView: View {
             }
             Picker("Duration", selection: $duration) {
                 Text("30 seconds").tag(TimeInterval?(30))
-                Text("1 minute").tag(TimeInterval?(60))
-                Text("2 minutes").tag(TimeInterval?(120))
-                Text("4 minutes").tag(TimeInterval?(240))
-                Text("8 minutes").tag(TimeInterval?(480))
-                Text("15 minutes").tag(nil as TimeInterval?)
+                Text("1 minute").tag(TimeInterval(60))
+                Text("2 minutes").tag(TimeInterval(2*60))
+                Text("4 minutes").tag(TimeInterval(4*60))
+                Text("8 minutes").tag(TimeInterval(8*60))
+                Text("15 minutes").tag(TimeInterval(15*60))
             }.pickerStyle(.menu)
             Picker("Repetitions", selection: $repetitions) {
                 ForEach(0..<10) { n in
@@ -142,10 +142,10 @@ struct EditAlarmView: View {
             Picker("Repetition delay", selection: $repetitionDelay) {
                 Text("30 seconds").tag(TimeInterval(30))
                 Text("1 minute").tag(TimeInterval(60))
-                Text("2 minutes").tag(TimeInterval(120))
-                Text("4 minutes").tag(TimeInterval(240))
-                Text("8 minutes").tag(TimeInterval(480))
-                Text("15 minutes").tag(TimeInterval(900))
+                Text("2 minutes").tag(TimeInterval(2*60))
+                Text("4 minutes").tag(TimeInterval(4*60))
+                Text("8 minutes").tag(TimeInterval(8*60))
+                Text("15 minutes").tag(TimeInterval(15*60))
             }.pickerStyle(.menu).disabled(repetitions == 0)
             if alarmType == .weekDay {
                 HStack(spacing: 14) {
@@ -164,7 +164,7 @@ struct EditAlarmView: View {
                                 .background(daysOfWeek.contains(AlarmLogic.allDaysOfWeek[day]) ? Color.accentColor : Color(.systemGray5))
                                 .clipShape(Circle())
                         }
-                        .disabled(AlarmLogic.allDaysOfWeek[day] == AlarmLogic.Saturday)
+                        .disabled(AlarmLogic.allDaysOfWeek[day] == AlarmModel.Saturday)
                         .buttonStyle(PlainButtonStyle())
                     }
                 }

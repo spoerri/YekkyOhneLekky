@@ -48,7 +48,7 @@ struct YekkyOhneLekkyApp: App {
         WindowGroup {
             ContentView(showAlert: $showAlert)
                 .task(id: phase) {
-//                    AlarmLogger.shared.info("foreground task")
+                    AlarmLogger.shared.info("running foreground task")
                     guard phase == .active else { return }
                     while !Task.isCancelled {
                         do {
@@ -83,12 +83,16 @@ enum BackgroundRefresh {
     nonisolated static let interval = Duration.seconds(3 * 60 * 60)
     
     nonisolated static func submit() {
-        let request = BGAppRefreshTaskRequest(identifier: identifier)
+//        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        let request = BGProcessingTaskRequest(identifier: identifier)
+        //these are the default, but why not be explicit
+        request.requiresExternalPower = false
+        request.requiresNetworkConnectivity = false
         request.earliestBeginDate = Date(timeIntervalSinceNow: interval  / .seconds(1))
         do {
             try BGTaskScheduler.shared.submit(request)
             BGTaskScheduler.shared.getPendingTaskRequests { pending in
-                AlarmLogger.shared.info("bg pending: " + pending.map { "\($0.identifier) after \($0.earliestBeginDate?.formatted(date: .omitted, time: .shortened) ?? "?")" }.joined(separator: ", "))
+                AlarmLogger.shared.info(pending.map { "refresh after \($0.earliestBeginDate?.formatted(date: .omitted, time: .shortened) ?? "?")" }.joined(separator: ", "))
             }
         } catch {
             AlarmLogger.shared.error("Could not submit bg task request: \(String(describing: error))")
@@ -104,7 +108,7 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     
     public func perform() async throws -> some IntentResult {
         do {
-            AlarmLogger.shared.info("intent")
+            AlarmLogger.shared.info("running intent")
             try await alarmActor.scheduleNextAlarms()
         } catch {
             AlarmLogger.shared.error("intent failed: \(String(describing: error))")

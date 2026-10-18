@@ -7,7 +7,9 @@ import OSLog
 
 @Model
 class AlarmModel {
-    public static nonisolated let Sunday = "Sunday"
+    public static nonisolated let FullDuration = 15.0*60
+    public static nonisolated let Sunday = Calendar.current.weekdaySymbols[0]
+    public static nonisolated let Saturday = Calendar.current.weekdaySymbols[6]
     @Attribute(.unique) var name: String
     var ids: Array<UUID>
     var hour: Int
@@ -20,13 +22,13 @@ class AlarmModel {
     var daysOfWeek: Set<String>
     var selectedSound: String?
     var createdAt: Date
-    var duration: TimeInterval?
+    var duration: TimeInterval
     var repetitions: Int
     var repetitionDelay: TimeInterval
     //stored as a plain Int so an unknown/removed enum case can't crash decoding; use alarmType instead
     @Attribute(originalName: "alarmType") var alarmTypeRaw: Int
     
-    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: String, nextDayToFire: String, isEnabled: Bool = true, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval? = 60, repetitions: Int = 2, repetitionDelay: TimeInterval = 240) {
+    init(name: String, alarmType: AlarmType, ids: Array<UUID> = Array(), daysOfWeek: Set<String> = Set(), hour: Int, minute: Int, maybeDayToFire: String, nextDayToFire: String, isEnabled: Bool = true, isExtra: Bool = false, isGrouped: Bool = false, selectedSound: String? = nil, duration: TimeInterval = FullDuration, repetitions: Int = 0, repetitionDelay: TimeInterval = 240) {
         self.name = name
         self.ids = ids
         self.hour = hour
@@ -127,7 +129,7 @@ class AlarmModel {
     }
     
     func isDue(_ now: Date) throws -> Bool {
-        return try getAlarmDateAndTime(maybeDayToFire) <= now
+        return try getAlarmDateAndTime(maybeDayToFire).addingTimeInterval((Double(1+repetitions))*(duration+repetitionDelay)) <= now
     }
     
     //this whole function is not strictly necessary, b/c AlarmLogic.scheduleNext cancels anything unexpected
