@@ -435,6 +435,29 @@ struct YekkyOhneLekkyTests {
         try await AlarmLogic.dismissAlarm(withID: UUID(), at(7, 5, on: tuesday), context)
     }
         
+    //bug: after a time zone change, the scheduled alarm rang at the old zone's local time
+    @Test func timeZoneChangeUnschedulesEverything() async throws {
+        let defaults = UserDefaults(suiteName: "timeZoneChangeUnschedulesEverything")!
+        defaults.removePersistentDomain(forName: "timeZoneChangeUnschedulesEverything")
+        let sunday = ISO8601DateFormatter().date(from:"2026-08-02T16:00:00Z")!
+        let monday = Calendar.current.date(byAdding: .day, value: 1, to: sunday)!
+        let alarm = AlarmModel(name: "Monday", alarmType: .weekDay, daysOfWeek: Set(["Monday"]), hour: 8, minute: 0, maybeDayToFire: AlarmModel.day(monday), nextDayToFire: AlarmModel.day(monday), duration: AlarmModel.FullDuration, repetitions: 0)
+        context.insert(alarm)
+        
+        try await AlarmLogic.unscheduleAllIfTimeZoneChanged(context, timeZoneID: "America/New_York", defaults: defaults) //the first run only remembers the zone
+        await AlarmLogic.scheduleNext(sunday, context)
+        #expect(mock.scheduled.values.sorted().elementsEqual([at(8, 0, on: monday)]))
+        
+        try await AlarmLogic.unscheduleAllIfTimeZoneChanged(context, timeZoneID: "America/New_York", defaults: defaults)
+        #expect(mock.scheduled.count == 1) //same zone: left alone
+        
+        try await AlarmLogic.unscheduleAllIfTimeZoneChanged(context, timeZoneID: "America/Los_Angeles", defaults: defaults)
+        #expect(mock.scheduled.isEmpty)
+        #expect(alarm.ids.isEmpty)
+        await AlarmLogic.scheduleNext(sunday, context)
+        #expect(mock.scheduled.count == 1) //scheduled again, at its local time in whatever zone the phone is now in
+    }
+    
     func at(_ hour: Int, _ minute: Int, on: Date) -> Date {
         return Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: on)!
     }

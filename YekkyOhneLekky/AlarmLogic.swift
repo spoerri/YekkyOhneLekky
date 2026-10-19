@@ -365,6 +365,23 @@ class AlarmLogic {
         return alarm.daysOfWeek == Set([AlarmModel.Saturday]) || alarm.daysOfWeek == Set([AlarmModel.Sunday]);
     }
     
+    private static let scheduledTimeZoneKey = "scheduledTimeZone"
+    
+    //AlarmKit's fixed schedules are absolute instants, so after a time zone change (e.g. a flight) they'd ring at the old zone's local time
+    //timeZoneID and defaults are for tests
+    public class func unscheduleAllIfTimeZoneChanged(_ modelContext: ModelContext, timeZoneID: String? = nil, defaults: UserDefaults = .standard) async throws {
+        NSTimeZone.resetSystemTimeZone() //otherwise the zone is cached for as long as the app keeps running
+        let current = timeZoneID ?? TimeZone.current.identifier
+        if let previous = defaults.string(forKey: scheduledTimeZoneKey), previous != current {
+            AlarmLogger.shared.info("time zone changed from \(previous) to \(current)")
+            for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>()) where !alarm.ids.isEmpty {
+                try alarm.unschedule()
+            }
+            try modelContext.save()
+        }
+        defaults.set(current, forKey: scheduledTimeZoneKey) //only once they're out, so a failure tries again next time
+    }
+    
     public class func rescheduleAll(_ now: Date, _ modelContext: ModelContext) async throws {
         for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>()) {
             do {
