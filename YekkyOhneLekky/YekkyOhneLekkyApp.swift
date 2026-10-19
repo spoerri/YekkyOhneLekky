@@ -105,10 +105,19 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     public static var description = IntentDescription("Schedule next YekkyOhneLekky alarm")
     public static var openAppWhenRun = false
     @Dependency private var alarmActor: AlarmActor
+    @Parameter(title: "Alarm ID") var alarmID: String? //TODO make this nonoptional
     
     public func perform() async throws -> some IntentResult {
+        AlarmLogger.shared.info("running intent")
         do {
-            AlarmLogger.shared.info("running intent")
+            if let alarmIdNonoptional = alarmID, let uuid = UUID(uuidString: alarmIdNonoptional) {
+                try await alarmActor.dismissAlarm(withID: uuid)
+            }
+        } catch {
+            AlarmLogger.shared.error("intent couldn't dismiss: \(String(describing: error))")
+        }
+        //even if dismissing failed: this is the main way the next alarm gets scheduled
+        do {
             try await alarmActor.scheduleNextAlarms()
         } catch {
             AlarmLogger.shared.error("intent failed: \(String(describing: error))")
@@ -117,6 +126,10 @@ public struct ScheduleNextAlarmsIntent: LiveActivityIntent {
     }
 
     public init() {
+    }
+    
+    public init(alarmID: UUID) {
+        self.alarmID = alarmID.uuidString
     }
 }
 

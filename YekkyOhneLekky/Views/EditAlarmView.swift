@@ -122,7 +122,7 @@ struct EditAlarmView: View {
                 Toggle("Extra (e.g. for a nap)", isOn: $isExtra)
             }
             Picker("Duration", selection: $duration) {
-                Text("30 seconds").tag(TimeInterval?(30))
+                Text("30 seconds").tag(TimeInterval(30))
                 Text("1 minute").tag(TimeInterval(60))
                 Text("2 minutes").tag(TimeInterval(2*60))
                 Text("4 minutes").tag(TimeInterval(4*60))
@@ -135,8 +135,8 @@ struct EditAlarmView: View {
                 }
             }.pickerStyle(.menu)
                 .onChange(of: repetitions) {
-                    if repetitions > 0 && duration == nil {
-                        duration = TimeInterval(60)
+                    if repetitions > 0 && duration >= AlarmModel.FullDuration {
+                        duration = TimeInterval(AlarmModel.ChagDefaultDuration)
                     }
                 }
             Picker("Repetition delay", selection: $repetitionDelay) {

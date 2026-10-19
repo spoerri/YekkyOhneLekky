@@ -82,7 +82,12 @@ struct AlarmListView: View {
                 for alarm in alarms.filter({$0.nextDayToFire < AlarmModel.day(now) && $0.alarmType == .explicit && $0.name != AlarmLogic.Once}) {
                     modelContext.delete(alarm)
                 }
-                await AlarmLogic.scheduleNext(now, modelContext)
+                //saved for the actor's context to see; scheduling is left to it (the app's foreground task runs it at launch), since scheduling from this context too would race with it
+                do {
+                    try modelContext.save()
+                } catch {
+                    AlarmLogger.shared.error("Failed to save initialized alarms: \(error)")
+                }
             }
         }
         .alert("Encountered a problem", isPresented: $showAlert) {

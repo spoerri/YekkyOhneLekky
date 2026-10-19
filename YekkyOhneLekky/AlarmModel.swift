@@ -7,9 +7,11 @@ import OSLog
 
 @Model
 class AlarmModel {
+    public static nonisolated let ChagDefaultDuration = TimeInterval(60)
     public static nonisolated let FullDuration = 15.0*60
-    public static nonisolated let Sunday = Calendar.current.weekdaySymbols[0]
-    public static nonisolated let Saturday = Calendar.current.weekdaySymbols[6]
+    //the stored (English) names; see AlarmLogic.allDaysOfWeek
+    public static nonisolated let Sunday = "Sunday"
+    public static nonisolated let Saturday = "Saturday"
     @Attribute(.unique) var name: String
     var ids: Array<UUID>
     var hour: Int
@@ -128,11 +130,19 @@ class AlarmModel {
         return fullDate
     }
     
+    //when its last AlarmKit alarm goes off, as AlarmLogic.scheduleNext lays them out: the last repetition, or the silence that cuts it short
+    func getLastRingDateAndTime() throws -> Date {
+        let cutShortAfter = duration < AlarmModel.FullDuration ? duration : 0
+        return try getAlarmDateAndTime().addingTimeInterval(Double(repetitions)*(cutShortAfter+repetitionDelay) + cutShortAfter)
+    }
+    
     func isDue(_ now: Date) throws -> Bool {
+        if maybeDayToFire == AlarmModel.never {
+            return true //it's waiting for its next day to come within the years AlarmLogic.getChagim() looks at, so AlarmLogic.rescheduleDay() looks again on every run
+        }
         return try getAlarmDateAndTime(maybeDayToFire).addingTimeInterval((Double(1+repetitions))*(duration+repetitionDelay)) <= now
     }
     
-    //this whole function is not strictly necessary, b/c AlarmLogic.scheduleNext cancels anything unexpected
     func unschedule() throws {
         var scheduled = Dictionary<UUID, String>()
         for alarm in try AlarmLogic.Manager.alarms {
@@ -151,7 +161,7 @@ class AlarmModel {
                 } else {
                     expiredCount += 1
                 }
-                ids.removeAll(where: { $0 == id }) //if there was an exception, try removing again next time
+                ids.removeAll(where: { $0 == id })
             } catch {
                 AlarmLogger.shared.error("could not unschedule \(id)!")
             }
@@ -168,10 +178,8 @@ class AlarmModel {
         } else if daysOfWeek.count == 1 {
             return daysOfWeek.first!
         } else {
-            let shortened = Set(daysOfWeek.map{String($0.prefix(3))})
-            return Calendar.current.shortWeekdaySymbols.filter{shortened.contains($0)}.joined(separator: ",")
+            return AlarmLogic.allDaysOfWeek.filter { daysOfWeek.contains($0) }.map { String($0.prefix(3)) }.joined(separator: ",")
         }
-        //TODO store ints instead of names, and use the other swift array
     }
     
     func copyConfigFrom(_ alarm: AlarmModel) {
@@ -186,9 +194,9 @@ class AlarmModel {
         return alarmType == .weekDay || alarmType == .saturday || alarmType == .roshChodesh
     }
     
-    //independent of whether the alarms are enabled etc
+    //independent of whether the alarms are enabled etc. Ties (e.g. two special shabboses on one day, like Vayakhel Pekudei on Shabbat HaChodesh) go by name: if neither won, each would keep overriding the other, recursing until the app crashed.
     func takesPriorityOver(_ other: AlarmModel) -> Bool {
-        return priority() < other.priority()
+        return (priority(), name) < (other.priority(), other.name)
     }
     
     private func priority() -> Int {
