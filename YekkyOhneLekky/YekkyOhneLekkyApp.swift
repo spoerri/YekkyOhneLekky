@@ -48,8 +48,8 @@ struct YekkyOhneLekkyApp: App {
         WindowGroup {
             ContentView(showAlert: $showAlert)
                 .task(id: phase) {
-                    AlarmLogger.shared.info("running foreground task")
                     guard phase == .active else { return }
+                    AlarmLogger.shared.info("running foreground task")
                     while !Task.isCancelled {
                         do {
                             try await alarmActor.scheduleNextAlarms()

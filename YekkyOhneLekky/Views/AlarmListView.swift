@@ -56,6 +56,7 @@ struct AlarmListView: View {
                         } catch {
                             AlarmLogger.shared.error("Failed to disable all: \(error)")
                         }
+                        AlarmLogic.publishUpcoming(Testable.Date(), modelContext)
                     }.sensoryFeedback(.warning, trigger: alarms)
                     .foregroundColor(.red)
                     .frame(width: 180, alignment: .leading)

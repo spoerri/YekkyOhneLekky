@@ -418,6 +418,7 @@ class AlarmLogic {
      Hands AlarmKit only a single AlarmModel at a time: the earliest enabled one that hasn't finished ringing. While it still has rings to come, nothing else is scheduled. Once they're past, the next call (from its stopIntent, the background refresh, or opening the app) schedules the one after it.
      */
     public class func scheduleNext(_ now: Date, _ modelContext: ModelContext) async {
+        defer { publishUpcoming(now, modelContext) }
         do {
             let next = try getNextAndCancelTheRest(now, modelContext)
             guard let next = next else {
@@ -452,6 +453,25 @@ class AlarmLogic {
             try modelContext.save()
         } catch {
             AlarmLogger.shared.error("\(now) Error scheduling next alarm: \(error)")
+        }
+    }
+    
+    //For the Next Alarm widget: each enabled alarm's next ring, soonest first
+    public class func publishUpcoming(_ now: Date, _ modelContext: ModelContext) {
+        do {
+            var upcoming: [UpcomingAlarm] = []
+            for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>()) where alarm.isEnabled && alarm.nextDayToFire != AlarmModel.never {
+                let date = try alarm.getAlarmDateAndTime()
+                if date > now {
+                    //one offs are named by their day, which the widget shows anyway
+                    let name = alarm.alarmType == .explicit ? (alarm.isExtra ? "Extra" : "One off") : alarm.name
+                    upcoming.append(UpcomingAlarm(date: date.advanced(by: -Testable.offset), name: name)) //real time, like what AlarmKit is given
+                }
+            }
+            upcoming.sort { $0.date < $1.date }
+            NextAlarmStore.save(Array(upcoming.prefix(10)))
+        } catch {
+            AlarmLogger.shared.error("Couldn't publish upcoming alarms: \(error)")
         }
     }
     

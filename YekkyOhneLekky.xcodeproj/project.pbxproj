@@ -7,11 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		03E1D6E72F00000000000002 /* NextAlarmWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 03E1D6E72F00000000000001 /* NextAlarmWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		031B7DC12EC442530065B407 /* Alarm Clock.icon in Resources */ = {isa = PBXBuildFile; fileRef = 031B7DC02EC442530065B407 /* Alarm Clock.icon */; };
 		03A8C0A82E80AF2100EA0572 /* Hebcal in Frameworks */ = {isa = PBXBuildFile; productRef = 03A8C0A72E80AF2100EA0572 /* Hebcal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		03E1D6E72F00000000000015 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 03AFC1272E80AA8300F106C8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 03E1D6E72F00000000000007;
+			remoteInfo = NextAlarmWidgetExtension;
+		};
 		0325023B3028AE1C0067C24D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 03AFC1272E80AA8300F106C8 /* Project object */;
@@ -21,13 +29,35 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		03E1D6E72F00000000000003 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				03E1D6E72F00000000000002 /* NextAlarmWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		03E1D6E72F00000000000001 /* NextAlarmWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NextAlarmWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		031B7DC02EC442530065B407 /* Alarm Clock.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Alarm Clock.icon"; sourceTree = "<group>"; };
 		032502373028AE1C0067C24D /* YekkyOhneLekkyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YekkyOhneLekkyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		03AFC12F2E80AA8300F106C8 /* YekkyOhneLekky.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = YekkyOhneLekky.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		03E1D6E72F00000000000006 /* Exceptions for "NextAlarmWidget" folder in "NextAlarmWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 03E1D6E72F00000000000007 /* NextAlarmWidgetExtension */;
+		};
 		03FF4D192E80F18D00A03924 /* Exceptions for "YekkyOhneLekky" folder in "YekkyOhneLekky" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -38,6 +68,19 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		03E1D6E72F00000000000004 /* NextAlarmWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				03E1D6E72F00000000000006 /* Exceptions for "NextAlarmWidget" folder in "NextAlarmWidgetExtension" target */,
+			);
+			path = NextAlarmWidget;
+			sourceTree = "<group>";
+		};
+		03E1D6E72F00000000000005 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		032502383028AE1C0067C24D /* YekkyOhneLekkyTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = YekkyOhneLekkyTests;
@@ -54,6 +97,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		03E1D6E72F00000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		032502343028AE1C0067C24D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -85,6 +135,8 @@
 				031B7DC02EC442530065B407 /* Alarm Clock.icon */,
 				03AFC1312E80AA8300F106C8 /* YekkyOhneLekky */,
 				032502383028AE1C0067C24D /* YekkyOhneLekkyTests */,
+				03E1D6E72F00000000000004 /* NextAlarmWidget */,
+				03E1D6E72F00000000000005 /* Shared */,
 				03250273302962280067C24D /* Frameworks */,
 				03AFC1302E80AA8300F106C8 /* Products */,
 			);
@@ -95,6 +147,7 @@
 			children = (
 				03AFC12F2E80AA8300F106C8 /* YekkyOhneLekky.app */,
 				032502373028AE1C0067C24D /* YekkyOhneLekkyTests.xctest */,
+				03E1D6E72F00000000000001 /* NextAlarmWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,6 +155,30 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		03E1D6E72F00000000000007 /* NextAlarmWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 03E1D6E72F00000000000012 /* Build configuration list for PBXNativeTarget "NextAlarmWidgetExtension" */;
+			buildPhases = (
+				03E1D6E72F00000000000008 /* Sources */,
+				03E1D6E72F00000000000009 /* Frameworks */,
+				03E1D6E72F00000000000010 /* Resources */,
+				03E1D6E72F00000000000011 /* Set Build Number */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				03E1D6E72F00000000000004 /* NextAlarmWidget */,
+				03E1D6E72F00000000000005 /* Shared */,
+			);
+			name = NextAlarmWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = NextAlarmWidgetExtension;
+			productReference = 03E1D6E72F00000000000001 /* NextAlarmWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		032502363028AE1C0067C24D /* YekkyOhneLekkyTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0325023F3028AE1C0067C24D /* Build configuration list for PBXNativeTarget "YekkyOhneLekkyTests" */;
@@ -132,14 +209,17 @@
 				03AFC12B2E80AA8300F106C8 /* Sources */,
 				03AFC12C2E80AA8300F106C8 /* Frameworks */,
 				03AFC12D2E80AA8300F106C8 /* Resources */,
+				03E1D6E72F00000000000003 /* Embed Foundation Extensions */,
 				03C0FFEE2EE0000000000001 /* Set Build Number */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				03E1D6E72F00000000000016 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				03AFC1312E80AA8300F106C8 /* YekkyOhneLekky */,
+				03E1D6E72F00000000000005 /* Shared */,
 			);
 			name = YekkyOhneLekky;
 			packageProductDependencies = (
@@ -166,6 +246,9 @@
 					03AFC12E2E80AA8300F106C8 = {
 						CreatedOnToolsVersion = 26.0;
 					};
+					03E1D6E72F00000000000007 = {
+						CreatedOnToolsVersion = 26.0;
+					};
 				};
 			};
 			buildConfigurationList = 03AFC12A2E80AA8300F106C8 /* Build configuration list for PBXProject "YekkyOhneLekky" */;
@@ -187,11 +270,19 @@
 			targets = (
 				03AFC12E2E80AA8300F106C8 /* YekkyOhneLekky */,
 				032502363028AE1C0067C24D /* YekkyOhneLekkyTests */,
+				03E1D6E72F00000000000007 /* NextAlarmWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		03E1D6E72F00000000000010 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		032502353028AE1C0067C24D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -229,9 +320,35 @@
 			shellPath = /bin/sh;
 			shellScript = "build=$(git -C \"$SRCROOT\" rev-list --count HEAD 2>/dev/null || echo \"$CURRENT_PROJECT_VERSION\")\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $build\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\n";
 		};
+		03E1D6E72F00000000000011 /* Set Build Number */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Set Build Number";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "build=$(git -C \"$SRCROOT\" rev-list --count HEAD 2>/dev/null || echo \"$CURRENT_PROJECT_VERSION\")\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $build\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		03E1D6E72F00000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		032502333028AE1C0067C24D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -249,6 +366,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		03E1D6E72F00000000000016 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 03E1D6E72F00000000000007 /* NextAlarmWidgetExtension */;
+			targetProxy = 03E1D6E72F00000000000015 /* PBXContainerItemProxy */;
+		};
 		0325023C3028AE1C0067C24D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 03AFC12E2E80AA8300F106C8 /* YekkyOhneLekky */;
@@ -257,6 +379,68 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		03E1D6E72F00000000000013 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = NextAlarmWidget/NextAlarmWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = GF5TZ8B98G;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NextAlarmWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Next Alarm";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.spoer.YekkyOhneLekky.NextAlarmWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		03E1D6E72F00000000000014 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = NextAlarmWidget/NextAlarmWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = GF5TZ8B98G;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NextAlarmWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Next Alarm";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.spoer.YekkyOhneLekky.NextAlarmWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		0325023D3028AE1C0067C24D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -431,6 +615,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "Alarm Clock";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = YekkyOhneLekky/YekkyOhneLekky.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = GF5TZ8B98G;
@@ -470,6 +655,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "Alarm Clock";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = YekkyOhneLekky/YekkyOhneLekky.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = GF5TZ8B98G;
@@ -507,6 +693,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		03E1D6E72F00000000000012 /* Build configuration list for PBXNativeTarget "NextAlarmWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				03E1D6E72F00000000000013 /* Debug */,
+				03E1D6E72F00000000000014 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		0325023F3028AE1C0067C24D /* Build configuration list for PBXNativeTarget "YekkyOhneLekkyTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

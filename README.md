@@ -5,6 +5,7 @@
 * play alarms for a shorter time than Apple Clock, to reduce annoyance of not dismissing them
 * automatically handle holiday-specific alarm times
 * use the new, robust alarm support in ios 26
+* "Next Alarm" widget for the home screen and lock screen, like Apple Clock's
 
 ## todo
 
