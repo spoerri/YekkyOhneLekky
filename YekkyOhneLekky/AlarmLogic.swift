@@ -456,23 +456,48 @@ class AlarmLogic {
         }
     }
     
-    //For the Next Alarm widget: each enabled alarm's next ring, soonest first
+    //For the Next Alarm widget: each enabled alarm's next ring, and the coming special days, soonest first
     public class func publishUpcoming(_ now: Date, _ modelContext: ModelContext) {
         do {
+            let all = try modelContext.fetch(FetchDescriptor<AlarmModel>())
             var upcoming: [UpcomingAlarm] = []
-            for alarm in try modelContext.fetch(FetchDescriptor<AlarmModel>()) where alarm.isEnabled && alarm.nextDayToFire != AlarmModel.never {
+            for alarm in all where alarm.isEnabled && alarm.nextDayToFire != AlarmModel.never {
                 let date = try alarm.getAlarmDateAndTime()
                 if date > now {
                     //one offs are named by their day, which the widget shows anyway
                     let name = alarm.alarmType == .explicit ? (alarm.isExtra ? "Extra" : "One off") : alarm.name
-                    upcoming.append(UpcomingAlarm(date: date.advanced(by: -Testable.offset), name: name)) //real time, like what AlarmKit is given
+                    upcoming.append(UpcomingAlarm(date: date.advanced(by: -Testable.offset), name: name, isSpecial: isSpecial(alarm))) //real time, like what AlarmKit is given
                 }
             }
             upcoming.sort { $0.date < $1.date }
-            NextAlarmStore.save(Array(upcoming.prefix(10)))
+
+            //Days of yom tov, rosh chodesh, nationals etc. (not weekdays or one offs) that matter: their alarm is enabled, or it's disabled but an enabled alarm that outranks it rings that day.
+            //maybeDayToFire is the special day itself, even when another alarm overrides it there.
+            let today = AlarmModel.day(now)
+            var specialDays: [UpcomingAlarm] = []
+            for alarm in all where isSpecial(alarm) {
+                let day = alarm.maybeDayToFire
+                guard day >= today && day != AlarmModel.never else {
+                    continue
+                }
+                let matters = alarm.isEnabled || all.contains { other in
+                    other !== alarm && other.isEnabled && !other.isExtra && other.nextDayToFire == day && other.takesPriorityOver(alarm)
+                }
+                if matters {
+                    specialDays.append(UpcomingAlarm(date: AlarmModel.date(day).advanced(by: -Testable.offset), name: alarm.name, isSpecial: true))
+                }
+            }
+            specialDays.sort { ($0.date, $0.name) < ($1.date, $1.name) }
+
+            NextAlarmStore.save(Array(upcoming.prefix(10)), specialDays: Array(specialDays.prefix(5)))
         } catch {
             AlarmLogger.shared.error("Couldn't publish upcoming alarms: \(error)")
         }
+    }
+    
+    //the alarms of particular days, as opposed to weekdays and one offs
+    private class func isSpecial(_ alarm: AlarmModel) -> Bool {
+        return alarm.alarmType != .weekDay && alarm.alarmType != .explicit
     }
     
     private class func getNextAndCancelTheRest(_ now: Date, _ modelContext: ModelContext) throws -> AlarmModel? {
@@ -720,3 +745,4 @@ protocol TestableAlarmManager {
 }
 
 extension AlarmManager : TestableAlarmManager {}
+
